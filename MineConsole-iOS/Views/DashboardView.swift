@@ -104,7 +104,7 @@ struct DashboardView: View {
                                         Button(role: .destructive) {
                                             deleteServer(server)
                                         } label: {
-                                            Label("Delete", systemName: "trash")
+                                            Label("Delete", systemImage: "trash")
                                         }
                                     }
                                 }
