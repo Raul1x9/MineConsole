@@ -1,0 +1,22 @@
+name: MineConsole
+options:
+  bundleIdPrefix: com.raul1x9
+targets:
+  MineConsole:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: MineConsole-iOS
+    settings:
+      base:
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "MineConsole requires FaceID to secure RCON administrator permissions."
+        TARGETED_DEVICE_FAMILY: "1" # iPhone only (or "1,2" for iPhone & iPad)
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.10"
+        # Enable capabilities
+        CODE_SIGN_STYLE: Automatic
+        # Setup modern SwiftData persistent container compilation support
+        CLANG_ENABLE_MODULES: YES
+        SWIFT_OBJC_INTEROP_MODE: objcxx

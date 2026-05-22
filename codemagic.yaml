@@ -1,0 +1,60 @@
+workflows:
+  ios-simulator-workflow:
+    name: MineConsole iOS Simulator Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+      - name: Generate Xcode Project
+        script: |
+          xcodegen generate
+      - name: Build iOS Simulator App
+        script: |
+          xcodebuild \
+            -project MineConsole.xcodeproj \
+            -scheme MineConsole \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            clean build
+    artifacts:
+      - build/Build/Products/Debug-iphonesimulator/*.app
+
+  ios-device-workflow:
+    name: MineConsole iOS Physical Device Build (IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+      # If using automatic signing, Codemagic requires your App Store Connect credentials set as environment variables.
+      # You can configure these in the Codemagic Web UI (Application settings > Environment variables).
+      # APP_STORE_CONNECT_KEY_IDENTIFIER
+      # APP_STORE_CONNECT_ISSUER_ID
+      # APP_STORE_CONNECT_PRIVATE_KEY
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+      - name: Generate Xcode Project
+        script: |
+          xcodegen generate
+      - name: Set up code signing settings
+        script: |
+          # If App Store Connect API credentials are provided, fetch signing files automatically
+          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "Warning: APP_STORE_CONNECT_PRIVATE_KEY not set. Building unsigned IPA or Xcode may fail."
+          else
+            keychain initialize
+            app-store-connect fetch-signing-files "com.raul1x9.MineConsole" --create
+            keychain add-certificates
+          fi
+      - name: Build iOS IPA Package
+        script: |
+          xcode-project build-ipa \
+            -workspace MineConsole.xcodeproj/project.xcworkspace \
+            -scheme MineConsole
+    artifacts:
+      - build/ios/ipa/*.ipa
