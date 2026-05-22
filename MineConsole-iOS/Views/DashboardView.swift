@@ -98,42 +98,7 @@ struct DashboardView: View {
                             VStack(spacing: 16) {
                                 ForEach(servers) { server in
                                     NavigationLink(value: server) {
-                                        HStack(spacing: 16) {
-                                            // Glowing Status Orb
-                                            Circle()
-                                                .fill(tailscaleConnected ? Color.green : Color.red)
-                                                .frame(width: 12, height: 12)
-                                                .shadow(color: (tailscaleConnected ? Color.green : Color.red).opacity(0.8), radius: 6)
-                                            
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(server.name.uppercased())
-                                                    .font(.custom("Courier-Bold", size: 16))
-                                                    .foregroundColor(.white)
-                                                
-                                                Text("\(server.ip):\(String(server.rconPort))")
-                                                    .font(.custom("Courier", size: 12))
-                                                    .foregroundColor(.white.opacity(0.5))
-                                            }
-                                            
-                                            Spacer()
-                                            
-                                            // Role Badge
-                                            Text(server.sharedRole.uppercased())
-                                                .font(.custom("Courier", size: 10))
-                                                .foregroundColor(.green)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(Color.green.opacity(0.1))
-                                                .cornerRadius(4)
-                                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.green.opacity(0.3), lineWidth: 1))
-                                            
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.white.opacity(0.3))
-                                        }
-                                        .padding()
-                                        .background(Color.white.opacity(0.03))
-                                        .cornerRadius(12)
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+                                        ServerRowView(server: server, tailscaleConnected: tailscaleConnected)
                                     }
                                     .swipeActions(edge: .trailing) {
                                         Button(role: .destructive) {
@@ -314,3 +279,49 @@ struct AddServerSheet: View {
         isPresented = false
     }
 }
+
+// Sub-component for individual server row to prevent Swift compiler timeout errors
+struct ServerRowView: View {
+    let server: ServerProfile
+    let tailscaleConnected: Bool
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Glowing Status Orb
+            Circle()
+                .fill(tailscaleConnected ? Color.green : Color.red)
+                .frame(width: 12, height: 12)
+                .shadow(color: (tailscaleConnected ? Color.green : Color.red).opacity(0.8), radius: 6)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(server.name.uppercased())
+                    .font(.custom("Courier-Bold", size: 16))
+                    .foregroundColor(.white)
+                
+                Text("\(server.ip):\(String(server.rconPort))")
+                    .font(.custom("Courier", size: 12))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            
+            Spacer()
+            
+            // Role Badge
+            Text(server.sharedRole.uppercased())
+                .font(.custom("Courier", size: 10))
+                .foregroundColor(.green)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(4)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.green.opacity(0.3), lineWidth: 1))
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.white.opacity(0.3))
+        }
+        .padding()
+        .background(Color.white.opacity(0.03))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+    }
+}
+

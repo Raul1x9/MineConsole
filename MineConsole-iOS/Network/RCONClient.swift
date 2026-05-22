@@ -166,7 +166,7 @@ public final class RCONClient: ObservableObject {
         let id = data.withUnsafeBytes { buffer in
             buffer.load(fromByteOffset: 0, as: Int32.self)
         }
-        let type = data.withUnsafeBytes { buffer in
+        _ = data.withUnsafeBytes { buffer in
             buffer.load(fromByteOffset: 4, as: Int32.self)
         }
         
