@@ -23,6 +23,40 @@ workflows:
     artifacts:
       - build/Build/Products/Debug-iphonesimulator/*.app
 
+  ios-sideload-workflow:
+    name: MineConsole iOS Sideload Build (Unsigned IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+      - name: Generate Xcode Project
+        script: |
+          xcodegen generate
+      - name: Build Unsigned iOS App Archive
+        script: |
+          xcodebuild archive \
+            -project MineConsole.xcodeproj \
+            -scheme MineConsole \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/MineConsole.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+      - name: Package Unsigned IPA
+        script: |
+          mkdir -p build/Payload
+          cp -r build/MineConsole.xcarchive/Products/Applications/MineConsole.app build/Payload/
+          cd build
+          zip -r MineConsole.ipa Payload
+    artifacts:
+      - build/MineConsole.ipa
+
+
   ios-device-workflow:
     name: MineConsole iOS Physical Device Build (IPA)
     max_build_duration: 60
