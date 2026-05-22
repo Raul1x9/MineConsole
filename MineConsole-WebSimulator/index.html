@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineConsole - Remote Server Manager iOS Simulator</title>
+    <!-- Modern Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Subtle animated mesh background -->
+    <div class="mesh-background"></div>
+
+    <div class="main-container">
+        
+        <!-- Left Sidebar: Control Dashboard -->
+        <div class="control-panel">
+            <div class="panel-header">
+                <div class="logo-orb"></div>
+                <div>
+                    <h2>MineConsole Simulator</h2>
+                    <p>SYSTEM TESTING CONSOLE & CONTROL CENTER</p>
+                </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="panel-section status-section">
+                <h3>CONNECTION GATEWAY</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Proxy Mode:</span>
+                        <span id="proxy-status" class="status-value offline">Detecting...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">RCON Active Connection:</span>
+                        <span id="rcon-status" class="status-value offline">Disconnected</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tailscale Simulation Control -->
+            <div class="panel-section">
+                <h3>TAILSCALE INTERACTIVE TESTING</h3>
+                <p class="section-desc">Toggle to test the security alert behavior when the iOS device leaves the private WireGuard tunnel.</p>
+                <div class="control-row">
+                    <label class="switch-container">
+                        <input type="checkbox" id="tailscale-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <div class="control-details">
+                        <span class="control-title">Tailscale VPN status</span>
+                        <span id="tailscale-indicator" class="control-status active">TUNNEL SECURE (100.x.x.x)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biometrics Control -->
+            <div class="panel-section">
+                <h3>BIOMETRICS CONFIGURATION</h3>
+                <p class="section-desc">Enable to force the FaceID scanner screen overlay on application startup.</p>
+                <div class="control-row">
+                    <label class="switch-container">
+                        <input type="checkbox" id="biometrics-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <div class="control-details">
+                        <span class="control-title">Require Biometric Scan</span>
+                        <span id="biometrics-indicator" class="control-status active">FaceID Protection Enabled</span>
+                    </div>
+                </div>
+                <button id="trigger-lock" class="btn btn-secondary">Force Lock Screen</button>
+            </div>
+
+            <!-- Role-based Guest sharing Simulator -->
+            <div class="panel-section">
+                <h3>GUEST PERMISSION SHARE LAB</h3>
+                <p class="section-desc">Generate specialized key links to test constrained roles (Viewer, Moderator, Admin) inside the iOS simulator.</p>
+                
+                <div class="form-group">
+                    <label for="share-server">SELECT SERVER TARGET</label>
+                    <select id="share-server" class="select-input">
+                        <option value="Survival Server">SURVIVAL SERVER</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>PRIVILEGE PROFILE LEVEL</label>
+                    <div class="role-selector">
+                        <button class="role-btn active" data-role="Viewer">VIEWER</button>
+                        <button class="role-btn" data-role="Moderator">MODERATOR</button>
+                        <button class="role-btn" data-role="Admin">ADMIN</button>
+                    </div>
+                </div>
+
+                <button id="generate-token-btn" class="btn btn-primary">GENERATE ACCESS TOKEN</button>
+
+                <div id="token-box" class="token-container hidden">
+                    <label>SECURE DEEP LINK</label>
+                    <div class="token-input-row">
+                        <input type="text" id="token-link" class="token-input" readonly>
+                        <button id="copy-token-btn" class="btn btn-icon">Copy</button>
+                    </div>
+                    <button id="apply-token-btn" class="btn btn-outline-primary">LAUNCH CLIENT LINK</button>
+                </div>
+            </div>
+            
+            <div class="panel-footer">
+                <p>© 2026 MineConsole. SwiftData-Keychain Native Client.</p>
+            </div>
+        </div>
+
+        <!-- Center Stage: The iPhone Simulator -->
+        <div class="iphone-container">
+            <div class="iphone-shell">
+                <!-- Notch Component -->
+                <div class="iphone-notch">
+                    <div class="camera"></div>
+                    <div class="speaker"></div>
+                </div>
+                
+                <!-- Screen Content -->
+                <div class="iphone-screen">
+                    
+                    <!-- iOS Status Bar -->
+                    <div class="ios-status-bar">
+                        <div class="time" id="ios-time">09:41</div>
+                        <div class="icons">
+                            <span class="vpn-badge" id="ios-vpn">VPN</span>
+                            <div class="signal-bars">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                            <div class="wifi-icon">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <div class="battery">
+                                <div class="battery-level"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SCREEN A: FACE ID BIOMETRIC LOCK -->
+                    <div id="screen-lock" class="app-screen">
+                        <div class="lock-wrapper">
+                            <div class="lock-header">
+                                <h1 class="glow-green">MINE_CONSOLE</h1>
+                                <p class="sys-version">SECURE ENCRYPTED NODE v1.0</p>
+                            </div>
+                            
+                            <div class="scanner-container">
+                                <div class="outer-ring"></div>
+                                <div class="inner-ring"></div>
+                                <div class="scan-grid"></div>
+                                <svg class="face-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor">
+                                    <path d="M25 35 Q 25 25 35 25 M 65 25 Q 75 25 75 35 M 75 65 Q 75 75 65 75 M 35 75 Q 25 75 25 65" stroke-width="2" stroke-linecap="round"/>
+                                    <!-- Eyebrows & Eyes -->
+                                    <path d="M35 43 Q 40 40 45 43 M 55 43 Q 60 40 65 43" stroke-width="1.5"/>
+                                    <circle cx="40" cy="48" r="2.5" fill="currentColor"/>
+                                    <circle cx="60" cy="48" r="2.5" fill="currentColor"/>
+                                    <!-- Nose -->
+                                    <path d="M50 48 V 58 H 47" stroke-width="1.5" stroke-linejoin="round"/>
+                                    <!-- Mouth -->
+                                    <path d="M42 66 Q 50 63 58 66" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                                <div class="scan-line"></div>
+                            </div>
+
+                            <button id="lock-auth-btn" class="btn btn-terminal">AUTHENTICATE SYSTEM</button>
+                            <p id="lock-status" class="lock-log">Awaiting biometric hardware authorization...</p>
+                        </div>
+                    </div>
+
+                    <!-- SCREEN B: DASHBOARD / SERVER SELECTION -->
+                    <div id="screen-dashboard" class="app-screen hidden">
+                        <div class="screen-header">
+                            <button id="nav-settings-btn" class="btn-icon-ios"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.1a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                            <h2 class="title-ios">MINE_CONSOLE</h2>
+                            <button id="nav-add-server-btn" class="btn-icon-ios"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+                        </div>
+
+                        <!-- Tailscale In-App Error Notification banner -->
+                        <div id="app-vpn-alert" class="app-alert hidden">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="orange" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+                            <div class="alert-content">
+                                <h4>TAILSCALE VPN DISCONNECTED</h4>
+                                <p>Cannot reach private internal addresses.</p>
+                            </div>
+                            <button id="alert-dismiss" class="btn-text">OK</button>
+                        </div>
+
+                        <div class="scroll-content">
+                            <!-- Server List Container -->
+                            <div class="section-title">ACTIVE SERVER NODES</div>
+                            <div id="server-list" class="list-container">
+                                <!-- Populated by Javascript -->
+                            </div>
+                            
+                            <!-- Guest Node Active Card (If loaded from link) -->
+                            <div id="guest-node-section" class="list-container hidden">
+                                <div class="section-title">GUEST NETWORK PRIVILEGES</div>
+                                <div id="guest-active-card"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SCREEN C: CONSOLE TERMINAL -->
+                    <div id="screen-console" class="app-screen hidden">
+                        <div class="screen-header-console">
+                            <button id="console-back-btn" class="btn-icon-ios"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                            <div class="header-console-details">
+                                <h3 id="console-server-title">SURVIVAL WORLD</h3>
+                                <p id="console-server-ip">100.89.4.12:25575</p>
+                            </div>
+                            <div id="console-role-tag" class="role-tag font-terminal">OWNER</div>
+                        </div>
+
+                        <!-- Mini Connection Status Bar -->
+                        <div class="console-sub-bar">
+                            <span class="status-indicator-dot online"></span>
+                            <span id="console-connection-label" class="font-terminal font-sm text-green">RCON LINK ESTABLISHED</span>
+                        </div>
+
+                        <!-- Log Screen -->
+                        <div id="terminal-screen" class="terminal-screen font-terminal">
+                            <div class="log-line text-yellow">[System] Initiating secure connection handshake...</div>
+                        </div>
+
+                        <!-- Keyboard Presets Bar -->
+                        <div id="console-presets" class="console-presets-bar">
+                            <button class="preset-btn font-terminal" data-cmd="/list">/list</button>
+                            <button class="preset-btn font-terminal" data-cmd="/tps">/tps</button>
+                            <button class="preset-btn font-terminal" data-cmd="/weather clear">/weather clear</button>
+                            <button class="preset-btn font-terminal" data-cmd="/time set day">/time set day</button>
+                        </div>
+
+                        <!-- Bottom Input Pane -->
+                        <div class="console-input-row">
+                            <!-- View only lock placeholder -->
+                            <div id="console-locked-pane" class="locked-bar hidden">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                                <span>CONSOLE IS VIEW-ONLY (RESTRICTED)</span>
+                            </div>
+
+                            <!-- Interactive Input -->
+                            <div id="console-active-pane" class="active-input-wrapper">
+                                <button id="history-sheet-btn" class="btn-icon-ios"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
+                                <input type="text" id="console-cmd-input" placeholder="Enter server command..." class="font-terminal">
+                                <button id="console-send-btn" class="btn-icon-ios btn-send-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SCREEN D: IN-APP SETTINGS -->
+                    <div id="screen-settings" class="app-screen hidden">
+                        <div class="screen-header">
+                            <h2 class="title-ios">SETTINGS_BOARD</h2>
+                            <button id="settings-close-btn" class="btn-text-ios">CLOSE</button>
+                        </div>
+                        
+                        <div class="scroll-content">
+                            <div class="settings-group">
+                                <div class="settings-group-title">SECURITY_ENVELOPE</div>
+                                
+                                <div class="settings-cell">
+                                    <div class="cell-left">
+                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M21 21v-2a4 4 0 00-3-3.87m-11 0A4 4 0 003 19v2M16 3.13a4 4 0 010 7.75M9 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                                        <div class="cell-text">
+                                            <h4>BIOMETRIC PASSCODE</h4>
+                                            <p>Enable FaceID access checks</p>
+                                        </div>
+                                    </div>
+                                    <label class="switch-container">
+                                        <input type="checkbox" id="settings-faceid-toggle" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="settings-cell">
+                                    <div class="cell-left">
+                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2ecc71" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10M12 2a15.3 15.3 0 00-4 10 15.3 15.3 0 004 10M2 12h20"/></svg>
+                                        <div class="cell-text">
+                                            <h4>TAILSCALE ENCLAVE</h4>
+                                            <p>Require active Tailscale routing</p>
+                                        </div>
+                                    </div>
+                                    <label class="switch-container">
+                                        <input type="checkbox" id="settings-vpn-toggle" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="settings-group-title">CREDENTIAL KEYCHAIN</div>
+                                <div class="settings-panel-desc">
+                                    All passwords are automatically locked inside the iOS Secure Keychain container. Double-SHA256 salted.
+                                </div>
+                                <div class="settings-cell clickable" id="btn-purge-keychain">
+                                    <span class="text-danger font-terminal">PURGE SECURE KEYCHAIN</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OVERLAY: IN-APP SHEET: ADD NEW SERVER -->
+                    <div id="sheet-add-server" class="app-sheet hidden">
+                        <div class="sheet-handle"></div>
+                        <div class="sheet-header">
+                            <button id="add-sheet-cancel" class="btn-text-ios">Cancel</button>
+                            <h3>NEW_CONNECTION</h3>
+                            <button id="add-sheet-save" class="btn-text-ios bold">Save</button>
+                        </div>
+                        <div class="sheet-body">
+                            <div class="ios-form-group">
+                                <label>SERVER NAME</label>
+                                <input type="text" id="add-server-name" placeholder="My Survival World">
+                            </div>
+                            <div class="ios-form-group">
+                                <label>IP ADDRESS / ADDRESS</label>
+                                <input type="text" id="add-server-ip" placeholder="100.89.4.12">
+                            </div>
+                            <div class="ios-form-group">
+                                <label>RCON PORT</label>
+                                <input type="number" id="add-server-port" value="25575">
+                            </div>
+                            <div class="ios-form-group">
+                                <label>RCON PASSWORD</label>
+                                <input type="password" id="add-server-password" placeholder="••••••••">
+                            </div>
+                            <p id="add-sheet-error" class="text-danger font-terminal font-sm hidden">Please supply valid inputs.</p>
+                        </div>
+                    </div>
+
+                    <!-- OVERLAY: IN-APP SHEET: COMMAND HISTORY -->
+                    <div id="sheet-history" class="app-sheet hidden">
+                        <div class="sheet-handle"></div>
+                        <div class="sheet-header">
+                            <h3>COMMAND_HISTORY</h3>
+                            <button id="history-sheet-close" class="btn-text-ios bold">Close</button>
+                        </div>
+                        <div class="sheet-body scrollable-history">
+                            <div id="history-list" class="list-container">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Home Bar Component -->
+                    <div class="iphone-home-bar"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Audio synthesizing helper for keyboard clicks, FaceID unlock, and alerts -->
+    <script src="app.js"></script>
+</body>
+</html>
