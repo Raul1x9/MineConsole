@@ -135,7 +135,9 @@ public final class RCONClient: ObservableObject {
             }
             
             // Convert length from little endian Int32
-            let length = data.withUnsafeBytes { $0.load(as: Int32.self) }
+            let length = data.withUnsafeBytes { buffer in
+                buffer.load(fromByteOffset: 0, as: Int32.self)
+            }
             
             // Read the remaining bytes (length specifies the packet content size)
             self.connection?.receive(minimumIncompleteLength: Int(length), maximumLength: Int(length)) { payloadData, _, isCompletePayload, payloadError in
@@ -161,8 +163,12 @@ public final class RCONClient: ObservableObject {
     private func handleIncomingPacket(data: Data) {
         guard data.count >= 8 else { return }
         
-        let id = data.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: Int32.self) }
-        let type = data.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: Int32.self) }
+        let id = data.withUnsafeBytes { buffer in
+            buffer.load(fromByteOffset: 0, as: Int32.self)
+        }
+        let type = data.withUnsafeBytes { buffer in
+            buffer.load(fromByteOffset: 4, as: Int32.self)
+        }
         
         // Extract string payload (until first null byte starting at offset 8)
         let payloadData = data.subdata(in: 8..<data.count)
@@ -216,13 +222,16 @@ struct RCONPacket {
         var data = Data()
         // Length header
         var tempLength = length
-        data.append(UnsafeBufferPointer(start: &tempLength, count: 1))
+        withUnsafeBytes(of: &tempLength) { data.append(contentsOf: $0) }
+        
         // Request ID
         var tempID = id
-        data.append(UnsafeBufferPointer(start: &tempID, count: 1))
+        withUnsafeBytes(of: &tempID) { data.append(contentsOf: $0) }
+        
         // Packet Type
         var tempType = type
-        data.append(UnsafeBufferPointer(start: &tempType, count: 1))
+        withUnsafeBytes(of: &tempType) { data.append(contentsOf: $0) }
+        
         // Payload string bytes
         data.append(payloadData)
         // Two null padding bytes
