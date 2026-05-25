@@ -1,6 +1,6 @@
 # MineConsole (Remote Server Manager)
 
-MineConsole is an ultra-premium remote server management client designed for Minecraft administrators to monitor live consoles, execute secure RCON terminal commands, and configure role-based access for guest moderators.
+MineConsole is a remote server management client designed for Minecraft administrators to monitor live consoles, execute secure RCON terminal commands, and configure role-based access for guest moderators.
 
 This workspace consists of a **double-layer architecture**:
 1. **`MineConsole-iOS/`**: A native Apple Swift 5.10 + SwiftUI + SwiftData codebase utilizing `LocalAuthentication` and `Security` Keychains that is ready to compile in Xcode.
