@@ -55,6 +55,7 @@ public final class RCONClient: ObservableObject {
                     self.isConnected = false
                     self.isAuthenticated = false
                     self.addLog("[Error] Connection failed: \(error.localizedDescription)")
+                    self.addLog("[System Hint] If using a local network IP or VPN (like Tailscale), verify that 'Local Network' permission is toggled ON under iOS Settings -> MineConsole.")
                 }
                 self.disconnect()
             case .cancelled:

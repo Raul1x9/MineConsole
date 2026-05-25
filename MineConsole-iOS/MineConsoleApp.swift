@@ -20,6 +20,10 @@ struct MineConsoleApp: App {
         }
     }()
 
+    public init() {
+        LocalNetworkPermissionHelper.triggerPrompt()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
