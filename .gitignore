@@ -47,6 +47,7 @@ xcuserdata/
 # Android-specific ignores
 .gradle/
 **/build/
+**/release/
 **/local.properties
 **/gradle/wrapper/gradle-wrapper.properties.bak
 *.apk
