@@ -107,7 +107,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.05f))
+                    Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.05f))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
