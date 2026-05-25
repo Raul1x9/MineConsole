@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -129,6 +130,20 @@ fun BiometricLockScreen(onAuthenticateClick: () -> Unit) {
                 Text(
                     text = "AUTHENTICATE CONNECTION",
                     modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = onAuthenticateClick, // In a real app, this would be a secondary auth method
+                modifier = Modifier.padding(bottom = 20.dp)
+            ) {
+                Text(
+                    text = "USE ALTERNATIVE ACCESS PROTOCOL",
+                    color = Color.White.copy(alpha = 0.3f),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
                 )
             }
         }

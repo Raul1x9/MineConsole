@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.raul1x9.mineconsole.data.ServerDatabase
 import com.raul1x9.mineconsole.models.ServerProfile
 import com.raul1x9.mineconsole.security.SecurityHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -44,7 +45,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addServer(name: String, ip: String, port: Int, pass: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val keychainKey = "mineconsole.password.${UUID.randomUUID()}"
             
             // Save encrypted password
@@ -62,7 +63,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteServer(server: ServerProfile) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // Delete encrypted password
             securityHelper.delete(server.keychainKey)
 

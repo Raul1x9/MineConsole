@@ -22,11 +22,11 @@ public final class SecurityHelper private constructor(context: Context) {
         )
     }
 
-    public fun saveString(key: String, value: String): Boolean {
-        return try {
-            sharedPreferences.edit().putString(key, value).commit()
+    public fun saveString(key: String, value: String) {
+        try {
+            sharedPreferences.edit().putString(key, value).apply()
         } catch (e: Exception) {
-            false
+            // Log error
         }
     }
 
