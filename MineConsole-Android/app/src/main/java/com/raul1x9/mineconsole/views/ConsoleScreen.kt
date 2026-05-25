@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.raul1x9.mineconsole.models.ServerProfile
+import com.raul1x9.mineconsole.network.ConsoleLogManager
 import com.raul1x9.mineconsole.network.RconClient
 import com.raul1x9.mineconsole.security.SecurityHelper
 import kotlinx.coroutines.launch
@@ -47,7 +48,9 @@ fun ConsoleScreen(
     val rcon = remember { RconClient() }
     val isConnected by rcon.isConnected.collectAsState()
     val isAuthenticated by rcon.isAuthenticated.collectAsState()
-    val logStream by rcon.logStream.collectAsState()
+    
+    val logStreamMap by ConsoleLogManager.logs.collectAsState()
+    val logStream = logStreamMap[server.id] ?: emptyList()
 
     var commandInput by remember { mutableStateOf("") }
     val commandHistory = remember { mutableStateListOf<String>() }
@@ -59,7 +62,7 @@ fun ConsoleScreen(
     LaunchedEffect(Unit) {
         val securityHelper = SecurityHelper.getInstance(context)
         val decryptedPass = securityHelper.readString(server.keychainKey) ?: ""
-        rcon.connect(server.ip, server.rconPort, decryptedPass)
+        rcon.connect(server.ip, server.rconPort, decryptedPass, server.id)
     }
 
     // Disconnect RCON on leave
@@ -149,6 +152,18 @@ fun ConsoleScreen(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
                             tint = Color(0xFF00FF66)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        triggerHapticFeedback("heavy")
+                        ConsoleLogManager.clearLogs(server.id)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Clear Logs",
+                            tint = Color.Red
                         )
                     }
                 },

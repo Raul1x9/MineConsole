@@ -28,9 +28,11 @@ class RconClient {
     private var currentRequestID = 42
     private val scope = CoroutineScope(Dispatchers.Default)
 
-    private var commandCallback: ((String?, Exception?) -> Unit)? = null
+    private val callbacks = mutableMapOf<Int, (String?, Exception?) -> Unit>()
+    private var serverId: String? = null
 
-    fun connect(host: String, port: Int, password: String) {
+    fun connect(host: String, port: Int, password: String, serverId: String? = null) {
+        this.serverId = serverId
         scope.launch(Dispatchers.IO) {
             try {
                 addLog("[System] TCP Socket connecting to $host:$port...")
@@ -48,7 +50,7 @@ class RconClient {
             } catch (e: Exception) {
                 _isConnected.value = false
                 _isAuthenticated.value = false
-                addLog("[Error] Connection failed: ${e.localizedMessage}")
+                addLog("[Error] Connection failed: ${e.javaClass.simpleName} - ${e.localizedMessage}")
                 disconnect()
             }
         }
@@ -74,6 +76,9 @@ class RconClient {
     private fun addLog(message: String) {
         scope.launch(Dispatchers.Main) {
             _logStream.value = _logStream.value + message
+            serverId?.let { id ->
+                ConsoleLogManager.addLog(id, message)
+            }
         }
     }
 
@@ -88,9 +93,13 @@ class RconClient {
             return
         }
 
-        currentRequestID++
-        commandCallback = completion
-        val cmdPacket = RconPacket(id = currentRequestID, type = 2, payload = command)
+        val id = synchronized(this) {
+            currentRequestID++
+            callbacks[currentRequestID] = completion
+            currentRequestID
+        }
+        
+        val cmdPacket = RconPacket(id = id, type = 2, payload = command)
         sendPacket(cmdPacket)
     }
 
@@ -100,7 +109,7 @@ class RconClient {
                 outputStream?.write(packet.encode())
                 outputStream?.flush()
             } catch (e: Exception) {
-                addLog("[Error] Failed to send packet: ${e.localizedMessage}")
+                addLog("[Error] Failed to send packet: ${e.javaClass.simpleName} - ${e.localizedMessage}")
                 disconnect()
             }
         }
@@ -136,7 +145,7 @@ class RconClient {
                     handleIncomingPacket(length, payloadBuffer)
                 }
             } catch (e: Exception) {
-                addLog("[Error] Receive stream broken: ${e.localizedMessage}")
+                addLog("[Error] Receive stream broken: ${e.javaClass.simpleName} - ${e.localizedMessage}")
                 disconnect()
             }
         }
@@ -172,8 +181,8 @@ class RconClient {
         } else {
             // Command delivery result
             addLog(payloadString)
-            commandCallback?.invoke(payloadString, null)
-            commandCallback = null
+            val callback = synchronized(this) { callbacks.remove(id) }
+            callback?.invoke(payloadString, null)
         }
     }
 
