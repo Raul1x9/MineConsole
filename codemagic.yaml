@@ -38,6 +38,7 @@ workflows:
           xcodegen generate
       - name: Build Unsigned iOS App Archive
         script: |
+          rm -rf build/
           xcodebuild archive \
             -project MineConsole.xcodeproj \
             -scheme MineConsole \
@@ -46,7 +47,8 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            clean build
       - name: Package Unsigned IPA
         script: |
           mkdir -p build/Payload
