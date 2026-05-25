@@ -4,6 +4,7 @@ import UIKit
 struct ConsoleView: View {
     let server: ServerProfile
     @StateObject private var rcon = RCONClient()
+    @ObservedObject private var logManager = ConsoleLogManager.shared
     
     @State private var commandInput = ""
     @State private var commandHistory: [String] = []
@@ -43,18 +44,19 @@ struct ConsoleView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 6) {
-                            ForEach(0..<rcon.logStream.count, id: \.self) { index in
-                                Text(rcon.logStream[index])
+                            let serverLogs = logManager.getLogs(for: server.id)
+                            ForEach(0..<serverLogs.count, id: \.self) { index in
+                                Text(serverLogs[index])
                                     .font(.custom("Courier", size: 12))
-                                    .foregroundColor(getLogColor(for: rcon.logStream[index]))
+                                    .foregroundColor(getLogColor(for: serverLogs[index]))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .id(index)
                             }
                         }
                         .padding()
                     }
-                    .onChange(of: rcon.logStream.count) {
-                        if let lastIndex = rcon.logStream.indices.last {
+                    .onChange(of: logManager.getLogs(for: server.id).count) {
+                        if let lastIndex = logManager.getLogs(for: server.id).indices.last {
                             withAnimation {
                                 proxy.scrollTo(lastIndex, anchor: .bottom)
                             }
@@ -89,7 +91,7 @@ struct ConsoleView: View {
                         // Viewer Mode UI Blocked
                         HStack {
                             Image(systemName: "lock.fill")
-                                .foregroundColor(.white.opacity(0.4))
+                               .foregroundColor(.white.opacity(0.4))
                             Text("CONSOLE IS VIEW-ONLY (RESTRICTED)")
                                 .font(.custom("Courier-Bold", size: 11))
                                 .foregroundColor(.white.opacity(0.4))
@@ -133,6 +135,17 @@ struct ConsoleView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: connectToRCON)
         .onDisappear(perform: disconnectFromRCON)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: {
+                    impactRigid.impactOccurred()
+                    ConsoleLogManager.shared.clearLogs(for: server.id)
+                }) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+            }
+        }
         .sheet(isPresented: $showingHistory) {
             CommandHistorySheet(history: $commandHistory, selectedCommand: $commandInput, isPresented: $showingHistory)
         }
@@ -141,11 +154,11 @@ struct ConsoleView: View {
     private func connectToRCON() {
         // Read decrypted password from keychain
         guard let pass = KeychainHelper.shared.readString(service: "MineConsole", account: server.keychainKey) else {
-            rcon.logStream.append("[Error] Keychain reference missing password credentials.")
+            ConsoleLogManager.shared.addLog(for: server.id, message: "[Error] Keychain reference missing password credentials.")
             return
         }
         
-        rcon.connect(host: server.ip, port: server.rconPort, password: pass)
+        rcon.connect(host: server.ip, port: server.rconPort, password: pass, serverId: server.id)
     }
     
     private func disconnectFromRCON() {
@@ -172,21 +185,21 @@ struct ConsoleView: View {
             for dCmd in destructiveCommands {
                 if lowerCmd.hasPrefix(dCmd) {
                     notificationFeedback.notificationOccurred(.error)
-                    rcon.logStream.append("[Security Alert] Command \(dCmd) blocked: Moderator privilege level exceeded.")
+                    ConsoleLogManager.shared.addLog(for: server.id, message: "[Security Alert] Command \(dCmd) blocked: Moderator privilege level exceeded.")
                     commandInput = ""
                     return
                 }
             }
         }
         
-        rcon.logStream.append("> \(cmd)")
+        ConsoleLogManager.shared.addLog(for: server.id, message: "> \(cmd)")
         
         // Send command through TCP socket client
         rcon.sendCommand(cmd) { response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     self.notificationFeedback.notificationOccurred(.error)
-                    self.rcon.logStream.append("[Error] Command delivery failed: \(error.localizedDescription)")
+                    ConsoleLogManager.shared.addLog(for: self.server.id, message: "[Error] Command delivery failed: \(error.localizedDescription)")
                 } else {
                     self.impactLight.impactOccurred()
                     if let cmdHistoryLast = self.commandHistory.last, cmdHistoryLast == cmd {

@@ -21,13 +21,23 @@ public final class RCONClient: ObservableObject {
     // Callbacks or publishers for response
     private var commandResponseCallback: ((String?, Error?) -> Void)?
     
+    private var serverId: UUID?
+    
     public init() {}
     
-    public func connect(host: String, port: Int, password: String) {
+    public func connect(host: String, port: Int, password: String, serverId: UUID? = nil) {
+        self.serverId = serverId
+        
         let nwHost = NWEndpoint.Host(host)
         let nwPort = NWEndpoint.Port(rawValue: UInt16(port)) ?? 25575
         
-        let parameters = NWParameters.tcp
+        let tcpOptions = NWProtocolTCP.Options()
+        tcpOptions.enableKeepalive = true
+        tcpOptions.keepaliveIdle = 10
+        tcpOptions.keepaliveInterval = 5
+        tcpOptions.keepaliveCount = 5
+        
+        let parameters = NWParameters(tls: nil, tcp: tcpOptions)
         connection = NWConnection(host: nwHost, port: nwPort, using: parameters)
         
         connection?.stateUpdateHandler = { [weak self] state in
@@ -73,6 +83,9 @@ public final class RCONClient: ObservableObject {
     private func addLog(_ message: String) {
         DispatchQueue.main.async {
             self.logStream.append(message)
+            if let serverId = self.serverId {
+                ConsoleLogManager.shared.addLog(for: serverId, message: message)
+            }
         }
     }
     
