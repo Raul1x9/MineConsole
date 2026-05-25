@@ -11,6 +11,8 @@ targets:
     settings:
       base:
         INFOPLIST_KEY_NSFaceIDUsageDescription: "MineConsole requires FaceID to secure RCON administrator permissions."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "MineConsole requires local network access to communicate securely with Minecraft RCON servers over your network or Tailscale VPN."
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1" # iPhone only (or "1,2" for iPhone & iPad)
         MARKETING_VERSION: "1.0.0"
