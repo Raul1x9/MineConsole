@@ -18,12 +18,16 @@ targets:
           CFBundlePrimaryIcon:
             CFBundleIconName: AppIcon
             CFBundleIconFiles:
-              - AppIcon
+              - AppIcon60x60
+              - AppIcon1024x1024
         CFBundleIcons~ipad:
           CFBundlePrimaryIcon:
             CFBundleIconName: AppIcon
             CFBundleIconFiles:
-              - AppIcon
+              - AppIcon60x60
+              - AppIcon76x76
+              - AppIcon83.5x83.5
+              - AppIcon1024x1024
     settings:
       base:
         GENERATE_INFOPLIST_FILE: NO
