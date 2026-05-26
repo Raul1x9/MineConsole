@@ -39,16 +39,15 @@ workflows:
       - name: Build Unsigned iOS App Archive
         script: |
           rm -rf build/
-          xcodebuild archive \
+          xcodebuild clean archive \
             -project MineConsole.xcodeproj \
             -scheme MineConsole \
             -destination 'generic/platform=iOS' \
             -archivePath build/MineConsole.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_ALLOWED=YES \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            clean build
+            PROVISIONING_PROFILE_SPECIFIER=""
       - name: Package Unsigned IPA
         script: |
           mkdir -p build/Payload

@@ -8,10 +8,6 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: MineConsole-iOS
-        excludes:
-          - "**/Assets.xcassets"
-    resources:
-      - path: MineConsole-iOS/Assets.xcassets
     settings:
       base:
         INFOPLIST_KEY_NSFaceIDUsageDescription: "MineConsole requires FaceID to secure RCON administrator permissions."
