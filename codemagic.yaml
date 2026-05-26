@@ -36,14 +36,15 @@ workflows:
       - name: Generate Xcode Project
         script: |
           xcodegen generate
-      - name: Build Unsigned iOS App Archive
+      - name: Build Unsigned iOS App (Physical Device)
         script: |
           rm -rf build/
-          xcodebuild clean archive \
+          xcodebuild clean build \
             -project MineConsole.xcodeproj \
             -scheme MineConsole \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/MineConsole.xcarchive \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=YES \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -51,7 +52,7 @@ workflows:
       - name: Package Unsigned IPA
         script: |
           mkdir -p build/Payload
-          cp -r build/MineConsole.xcarchive/Products/Applications/MineConsole.app build/Payload/
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/MineConsole.app build/Payload/
           cd build
           zip -r MineConsole.ipa Payload
     artifacts:
