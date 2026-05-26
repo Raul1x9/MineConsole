@@ -49,6 +49,14 @@ workflows:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER=""
+          
+          echo "Compiling Asset Catalog manually via actool..."
+          xcrun actool MineConsole-iOS/Assets.xcassets \
+            --compile build/DerivedData/Build/Products/Release-iphoneos/MineConsole.app \
+            --platform iphoneos \
+            --minimum-deployment-target 17.0 \
+            --app-icon AppIcon \
+            --output-partial-info-plist build/partial-info.plist
       - name: Package Unsigned IPA
         script: |
           mkdir -p build/Payload
