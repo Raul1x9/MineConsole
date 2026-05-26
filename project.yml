@@ -8,6 +8,8 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: MineConsole-iOS
+        excludes:
+          - "**/Assets.xcassets"
     resources:
       - path: MineConsole-iOS/Assets.xcassets
     settings:
