@@ -1,6 +1,9 @@
 import Foundation
 import Network
 import Combine
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public enum RCONError: Error {
     case connectionFailed
@@ -23,10 +26,39 @@ public final class RCONClient: ObservableObject {
     
     private var serverId: UUID?
     
+    #if canImport(UIKit)
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    #endif
+    
     public init() {}
+    
+    deinit {
+        endBackgroundTask()
+    }
+    
+    private func startBackgroundTask() {
+        #if canImport(UIKit)
+        guard backgroundTaskID == .invalid else { return }
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RCONConnectionKeepAlive") { [weak self] in
+            self?.addLog("[System] Background keep-alive time expired.")
+            self?.endBackgroundTask()
+            self?.disconnect()
+        }
+        #endif
+    }
+    
+    private func endBackgroundTask() {
+        #if canImport(UIKit)
+        if backgroundTaskID != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
+        }
+        #endif
+    }
     
     public func connect(host: String, port: Int, password: String, serverId: UUID? = nil) {
         self.serverId = serverId
+        startBackgroundTask()
         
         let nwHost = NWEndpoint.Host(host)
         let nwPort = NWEndpoint.Port(rawValue: UInt16(port)) ?? 25575
@@ -79,6 +111,7 @@ public final class RCONClient: ObservableObject {
             self.isConnected = false
             self.isAuthenticated = false
         }
+        endBackgroundTask()
     }
     
     private func addLog(_ message: String) {

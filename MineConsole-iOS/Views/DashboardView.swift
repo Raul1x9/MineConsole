@@ -18,12 +18,36 @@ struct DashboardView: View {
     // Tailscale Mock State
     @State private var tailscaleConnected = true
     
+    // Theme preferences
+    @AppStorage("appTheme") private var appTheme = "System"
+    @AppStorage("appAccentColor") private var appAccentColor = "Green"
+    @Environment(\.colorScheme) private var systemColorScheme
+    
+    private var isDark: Bool {
+        switch appTheme {
+        case "Light": return false
+        case "Dark": return true
+        default: return systemColorScheme == .dark
+        }
+    }
+    
+    private var colors: ThemeColors {
+        ThemeManager.getThemeColors(themeName: appTheme, isSystemDark: systemColorScheme == .dark)
+    }
+    
+    private var accentColor: Color {
+        ThemeManager.getAccentColor(name: appAccentColor)
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
-                // Sleek Deep Gray/Black Gradient Background
-                LinearGradient(colors: [Color(white: 0.05), Color(white: 0.12)], startPoint: .top, endPoint: .bottom)
-                    .ignoresSafeArea()
+                if isDark {
+                    LinearGradient(colors: [Color(white: 0.05), Color(white: 0.12)], startPoint: .top, endPoint: .bottom)
+                        .ignoresSafeArea()
+                } else {
+                    colors.background.ignoresSafeArea()
+                }
                 
                 VStack(spacing: 20) {
                     // Tailscale Alert Banner
@@ -61,16 +85,16 @@ struct DashboardView: View {
                         VStack(spacing: 20) {
                             Image(systemName: "terminal")
                                 .font(.system(size: 60))
-                                .foregroundColor(.green.opacity(0.5))
+                                .foregroundColor(accentColor.opacity(0.5))
                                 .padding(.top, 40)
                             
                             Text("NO_SERVERS_DETECTED")
                                 .font(.custom("Courier-Bold", size: 16))
-                                .foregroundColor(.green)
+                                .foregroundColor(accentColor)
                             
                             Text("Link your first Minecraft RCON server below.")
                                 .font(.custom("Courier", size: 12))
-                                .foregroundColor(.white.opacity(0.6))
+                                .foregroundColor(colors.subText)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                             
@@ -80,17 +104,17 @@ struct DashboardView: View {
                                     Text("ADD SERVER PROFILE")
                                 }
                                 .font(.custom("Courier-Bold", size: 14))
-                                .foregroundColor(.black)
+                                .foregroundColor(isDark ? .black : .white)
                                 .padding()
-                                .background(Color.green)
+                                .background(accentColor)
                                 .cornerRadius(8)
                             }
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.white.opacity(0.02))
+                        .background(colors.cardBackground)
                         .cornerRadius(12)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(colors.border, lineWidth: 1))
                         .padding()
                     } else {
                         // Server Listing
@@ -98,7 +122,7 @@ struct DashboardView: View {
                             VStack(spacing: 16) {
                                 ForEach(servers) { server in
                                     NavigationLink(value: server) {
-                                        ServerRowView(server: server, tailscaleConnected: tailscaleConnected)
+                                        ServerRowView(server: server, tailscaleConnected: tailscaleConnected, colors: colors, accentColor: accentColor, isDark: isDark)
                                     }
                                     .swipeActions(edge: .trailing) {
                                         Button(role: .destructive) {
@@ -123,13 +147,13 @@ struct DashboardView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: { showingSettings = true }) {
                         Image(systemName: "gearshape")
-                            .foregroundColor(.green)
+                            .foregroundColor(accentColor)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { showingAddSheet = true }) {
                         Image(systemName: "plus")
-                            .foregroundColor(.green)
+                            .foregroundColor(accentColor)
                     }
                 }
             }
@@ -173,16 +197,36 @@ struct AddServerSheet: View {
     @Binding var isPresented: Bool
     var onSave: (String, String, Int, String) -> Void
     
+    @AppStorage("appTheme") private var appTheme = "System"
+    @AppStorage("appAccentColor") private var appAccentColor = "Green"
+    @Environment(\.colorScheme) private var systemColorScheme
+    
     @State private var name = ""
     @State private var ip = ""
     @State private var port = "25575"
     @State private var password = ""
     @State private var showError = false
     
+    private var isDark: Bool {
+        switch appTheme {
+        case "Light": return false
+        case "Dark": return true
+        default: return systemColorScheme == .dark
+        }
+    }
+    
+    private var colors: ThemeColors {
+        ThemeManager.getThemeColors(themeName: appTheme, isSystemDark: systemColorScheme == .dark)
+    }
+    
+    private var accentColor: Color {
+        ThemeManager.getAccentColor(name: appAccentColor)
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                colors.background.ignoresSafeArea()
                 
                 VStack(spacing: 20) {
                     ScrollView {
@@ -190,51 +234,51 @@ struct AddServerSheet: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("SERVER PROFILE NAME")
                                     .font(.custom("Courier-Bold", size: 12))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(accentColor)
                                 TextField("e.g. My Survival Server", text: $name)
                                     .font(.custom("Courier", size: 14))
                                     .padding()
-                                    .background(Color.white.opacity(0.05))
+                                    .background(colors.border)
                                     .cornerRadius(8)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(colors.text)
                             }
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("SERVER IP / ADDRESS")
                                     .font(.custom("Courier-Bold", size: 12))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(accentColor)
                                 TextField("e.g. 100.111.45.98", text: $ip)
                                     .font(.custom("Courier", size: 14))
                                     .padding()
-                                    .background(Color.white.opacity(0.05))
+                                    .background(colors.border)
                                     .cornerRadius(8)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(colors.text)
                                     .keyboardType(.numbersAndPunctuation)
                             }
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("RCON TCP PORT")
                                     .font(.custom("Courier-Bold", size: 12))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(accentColor)
                                 TextField("25575", text: $port)
                                     .font(.custom("Courier", size: 14))
                                     .padding()
-                                    .background(Color.white.opacity(0.05))
+                                    .background(colors.border)
                                     .cornerRadius(8)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(colors.text)
                                     .keyboardType(.numberPad)
                             }
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("RCON PASSWORD")
                                     .font(.custom("Courier-Bold", size: 12))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(accentColor)
                                 SecureField("••••••••", text: $password)
                                     .font(.custom("Courier", size: 14))
                                     .padding()
-                                    .background(Color.white.opacity(0.05))
+                                    .background(colors.border)
                                     .cornerRadius(8)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(colors.text)
                             }
                         }
                         .padding()
@@ -249,10 +293,10 @@ struct AddServerSheet: View {
                     Button(action: saveAction) {
                         Text("SAVE CONNECTION PROFILE")
                             .font(.custom("Courier-Bold", size: 14))
-                            .foregroundColor(.black)
+                            .foregroundColor(isDark ? .black : .white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.green)
+                            .background(accentColor)
                             .cornerRadius(8)
                     }
                     .padding()
@@ -264,7 +308,7 @@ struct AddServerSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("CANCEL") { isPresented = false }
                         .font(.custom("Courier-Bold", size: 12))
-                        .foregroundColor(.green)
+                        .foregroundColor(accentColor)
                 }
             }
         }
@@ -284,23 +328,26 @@ struct AddServerSheet: View {
 struct ServerRowView: View {
     let server: ServerProfile
     let tailscaleConnected: Bool
+    let colors: ThemeColors
+    let accentColor: Color
+    let isDark: Bool
     
     var body: some View {
         HStack(spacing: 16) {
             // Glowing Status Orb
             Circle()
-                .fill(tailscaleConnected ? Color.green : Color.red)
+                .fill(tailscaleConnected ? accentColor : Color.red)
                 .frame(width: 12, height: 12)
-                .shadow(color: (tailscaleConnected ? Color.green : Color.red).opacity(0.8), radius: 6)
+                .shadow(color: (tailscaleConnected ? accentColor : Color.red).opacity(0.8), radius: 6)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(server.name.uppercased())
                     .font(.custom("Courier-Bold", size: 16))
-                    .foregroundColor(.white)
+                    .foregroundColor(colors.text)
                 
                 Text("\(server.ip):\(String(server.rconPort))")
                     .font(.custom("Courier", size: 12))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(colors.subText)
             }
             
             Spacer()
@@ -308,20 +355,19 @@ struct ServerRowView: View {
             // Role Badge
             Text(server.sharedRole.uppercased())
                 .font(.custom("Courier", size: 10))
-                .foregroundColor(.green)
+                .foregroundColor(accentColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.green.opacity(0.1))
+                .background(accentColor.opacity(0.1))
                 .cornerRadius(4)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.green.opacity(0.3), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(accentColor.opacity(0.3), lineWidth: 1))
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.white.opacity(0.3))
+                .foregroundColor(colors.subText)
         }
         .padding()
-        .background(Color.white.opacity(0.03))
+        .background(colors.cardBackground)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(colors.border, lineWidth: 1))
     }
 }
-

@@ -34,6 +34,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var tailscaleConnected = mutableStateOf(sharedPrefs.getBoolean("tailscale_connected", true))
         private set
 
+    var appTheme = mutableStateOf(sharedPrefs.getString("app_theme", "System") ?: "System")
+        private set
+
+    var appAccentColor = mutableStateOf(sharedPrefs.getString("app_accent_color", "Green") ?: "Green")
+        private set
+
     fun setBiometricsEnabled(enabled: Boolean) {
         biometricsEnabled.value = enabled
         sharedPrefs.edit().putBoolean("biometrics_enabled", enabled).apply()
@@ -42,6 +48,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setTailscaleConnected(connected: Boolean) {
         tailscaleConnected.value = connected
         sharedPrefs.edit().putBoolean("tailscale_connected", connected).apply()
+    }
+
+    fun setAppTheme(theme: String) {
+        appTheme.value = theme
+        sharedPrefs.edit().putString("app_theme", theme).apply()
+    }
+
+    fun setAppAccentColor(color: String) {
+        appAccentColor.value = color
+        sharedPrefs.edit().putString("app_accent_color", color).apply()
     }
 
     fun addServer(name: String, ip: String, port: Int, pass: String) {

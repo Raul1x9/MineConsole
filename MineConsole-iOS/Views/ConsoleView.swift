@@ -10,35 +10,73 @@ struct ConsoleView: View {
     @State private var commandHistory: [String] = []
     @State private var showingHistory = false
     
+    // Theme preferences
+    @AppStorage("appTheme") private var appTheme = "System"
+    @AppStorage("appAccentColor") private var appAccentColor = "Green"
+    @Environment(\.colorScheme) private var systemColorScheme
+    
     // Haptic Feedbacks
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactRigid = UIImpactFeedbackGenerator(style: .rigid)
     private let notificationFeedback = UINotificationFeedbackGenerator()
     
+    // Standard MC Commands for Autocomplete
+    private let autocompleteCommands = [
+        "/help", "/give", "/gamemode", "/tp", "/time", "/weather", "/difficulty", "/spawnpoint",
+        "/setworldspawn", "/gamerule", "/clear", "/effect", "/enchant", "/experience", "/xp",
+        "/kill", "/say", "/tell", "/msg", "/w", "/summon", "/fill", "/clone", "/locate", "/locatebiome",
+        "/seed", "/kick", "/ban", "/pardon", "/ban-ip", "/pardon-ip", "/op", "/deop", "/whitelist",
+        "/list", "/save-all", "/save-off", "/save-on", "/stop", "/tellraw", "/title", "/attribute", "/bossbar"
+    ]
+    
+    private var isDark: Bool {
+        switch appTheme {
+        case "Light": return false
+        case "Dark": return true
+        default: return systemColorScheme == .dark
+        }
+    }
+    
+    private var colors: ThemeColors {
+        ThemeManager.getThemeColors(themeName: appTheme, isSystemDark: systemColorScheme == .dark)
+    }
+    
+    private var accentColor: Color {
+        ThemeManager.getAccentColor(name: appAccentColor)
+    }
+    
+    private var filteredSuggestions: [String] {
+        guard !commandInput.isEmpty else { return [] }
+        let trimmed = commandInput.lowercased()
+        return autocompleteCommands.filter { cmd in
+            cmd.lowercased().hasPrefix(trimmed) && cmd.lowercased() != trimmed
+        }
+    }
+    
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            colors.background.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Connection Status Header Bar
                 HStack {
                     Circle()
-                        .fill(rcon.isAuthenticated ? Color.green : Color.red)
+                        .fill(rcon.isAuthenticated ? accentColor : Color.red)
                         .frame(width: 8, height: 8)
-                        .shadow(color: (rcon.isAuthenticated ? Color.green : Color.red).opacity(0.8), radius: 4)
+                        .shadow(color: (rcon.isAuthenticated ? accentColor : Color.red).opacity(0.8), radius: 4)
                     
                     Text(rcon.isAuthenticated ? "CONNECTED - \(server.ip)" : "DISCONNECTED")
                         .font(.custom("Courier-Bold", size: 10))
-                        .foregroundColor(rcon.isAuthenticated ? .green : .red)
+                        .foregroundColor(rcon.isAuthenticated ? accentColor : .red)
                     
                     Spacer()
                     
                     Text("ROLE: \(server.sharedRole.uppercased())")
                         .font(.custom("Courier", size: 10))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(colors.subText)
                 }
                 .padding()
-                .background(Color.white.opacity(0.02))
+                .background(colors.cardBackground)
                 
                 // Real-time scrolling terminal screen
                 ScrollViewReader { proxy in
@@ -64,25 +102,52 @@ struct ConsoleView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(white: 0.02))
-                .border(Color.white.opacity(0.05), width: 1)
+                .background(isDark ? Color(white: 0.02) : Color.white)
+                .border(colors.border, width: 1)
                 
                 // Fast-Access Preset Command Keypad (only for Mod & Admin)
                 if server.sharedRole != "Viewer" {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
-                            PresetButton(label: "/list") { sendPresetCommand("/list") }
-                            PresetButton(label: "/tps") { sendPresetCommand("/tps") }
-                            PresetButton(label: "/weather clear") { sendPresetCommand("/weather clear") }
-                            PresetButton(label: "/time set day") { sendPresetCommand("/time set day") }
+                            PresetButton(label: "/list", accentColor: accentColor, colors: colors) { sendPresetCommand("/list") }
+                            PresetButton(label: "/tps", accentColor: accentColor, colors: colors) { sendPresetCommand("/tps") }
+                            PresetButton(label: "/weather clear", accentColor: accentColor, colors: colors) { sendPresetCommand("/weather clear") }
+                            PresetButton(label: "/time set day", accentColor: accentColor, colors: colors) { sendPresetCommand("/time set day") }
                             if server.sharedRole == "Admin" {
-                                PresetButton(label: "/say Alert!") { sendPresetCommand("/say [Admin Alert]") }
+                                PresetButton(label: "/say Alert!", accentColor: accentColor, colors: colors) { sendPresetCommand("/say [Admin Alert]") }
                             }
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 8)
                     }
-                    .background(Color.white.opacity(0.01))
+                    .background(colors.cardBackground)
+                }
+                
+                // Horizontal Autocomplete suggestions bar
+                if !filteredSuggestions.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(filteredSuggestions, id: \.self) { suggestion in
+                                Button(action: {
+                                    impactLight.impactOccurred()
+                                    commandInput = suggestion + " "
+                                }) {
+                                    Text(suggestion)
+                                        .font(.custom("Courier-Bold", size: 12))
+                                        .foregroundColor(accentColor)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(accentColor.opacity(0.1))
+                                        .cornerRadius(6)
+                                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(accentColor.opacity(0.3), lineWidth: 1))
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
+                    .background(colors.cardBackground)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
                 
                 // Bottom Input Console Pane
@@ -91,19 +156,19 @@ struct ConsoleView: View {
                         // Viewer Mode UI Blocked
                         HStack {
                             Image(systemName: "lock.fill")
-                               .foregroundColor(.white.opacity(0.4))
+                               .foregroundColor(colors.subText)
                             Text("CONSOLE IS VIEW-ONLY (RESTRICTED)")
                                 .font(.custom("Courier-Bold", size: 11))
-                                .foregroundColor(.white.opacity(0.4))
+                                .foregroundColor(colors.subText)
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.white.opacity(0.04))
+                        .background(colors.border)
                     } else {
                         // Interactive RCON Command Terminal Box
                         Button(action: { showingHistory = true }) {
                             Image(systemName: "clock.arrow.circlepath")
-                                .foregroundColor(.green)
+                                .foregroundColor(accentColor)
                                 .font(.system(size: 20))
                         }
                         
@@ -111,30 +176,36 @@ struct ConsoleView: View {
                             .font(.custom("Courier", size: 14))
                             .padding(.vertical, 10)
                             .padding(.horizontal, 12)
-                            .background(Color.white.opacity(0.05))
+                            .background(colors.border)
                             .cornerRadius(6)
-                            .foregroundColor(.white)
+                            .foregroundColor(colors.text)
                             .textInputAutocapitalization(.never)
                             .disableAutocorrection(true)
                             .onSubmit(executeCommand)
                         
                         Button(action: executeCommand) {
                             Image(systemName: "paperplane.fill")
-                                .foregroundColor(.black)
+                                .foregroundColor(isDark ? .black : .white)
                                 .padding(10)
-                                .background(Color.green)
+                                .background(accentColor)
                                 .cornerRadius(6)
                         }
                     }
                 }
                 .padding()
-                .background(Color.white.opacity(0.02))
+                .background(colors.cardBackground)
             }
         }
         .navigationTitle(server.name.uppercased())
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear(perform: connectToRCON)
-        .onDisappear(perform: disconnectFromRCON)
+        .onAppear {
+            connectToRCON()
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
+        .onDisappear {
+            disconnectFromRCON()
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: {
@@ -147,7 +218,7 @@ struct ConsoleView: View {
             }
         }
         .sheet(isPresented: $showingHistory) {
-            CommandHistorySheet(history: $commandHistory, selectedCommand: $commandInput, isPresented: $showingHistory)
+            CommandHistorySheet(history: $commandHistory, selectedCommand: $commandInput, isPresented: $showingHistory, colors: colors, accentColor: accentColor)
         }
     }
     
@@ -217,33 +288,35 @@ struct ConsoleView: View {
     // Dynamic color coding for logs
     private func getLogColor(for line: String) -> Color {
         if line.hasPrefix(">") {
-            return .green
+            return isDark ? accentColor : Color(red: 0.0, green: 0.5, blue: 0.2)
         } else if line.contains("[Error]") || line.contains("[Security Alert]") {
-            return .red
+            return isDark ? .red : Color(red: 0.8, green: 0.0, blue: 0.0)
         } else if line.contains("[System]") {
-            return .yellow
+            return isDark ? Color(red: 1.0, green: 0.8, blue: 0.0) : Color(red: 0.7, green: 0.4, blue: 0.0)
         } else if line.contains("joined the game") || line.contains("left the game") {
-            return .blue
+            return isDark ? Color(red: 0.4, green: 0.7, blue: 1.0) : Color(red: 0.0, green: 0.3, blue: 0.8)
         }
-        return .white
+        return colors.text
     }
 }
 
 // Preset Button Cell
 struct PresetButton: View {
     let label: String
+    let accentColor: Color
+    let colors: ThemeColors
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             Text(label)
                 .font(.custom("Courier-Bold", size: 11))
-                .foregroundColor(.green)
+                .foregroundColor(accentColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(Color.green.opacity(0.1))
+                .background(accentColor.opacity(0.1))
                 .cornerRadius(4)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.green.opacity(0.3), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(accentColor.opacity(0.3), lineWidth: 1))
         }
     }
 }
@@ -253,20 +326,22 @@ struct CommandHistorySheet: View {
     @Binding var history: [String]
     @Binding var selectedCommand: String
     @Binding var isPresented: Bool
+    let colors: ThemeColors
+    let accentColor: Color
     
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                colors.background.ignoresSafeArea()
                 
                 if history.isEmpty {
                     VStack {
                         Image(systemName: "clock")
                             .font(.system(size: 40))
-                            .foregroundColor(.white.opacity(0.2))
+                            .foregroundColor(colors.subText)
                         Text("HISTORY_EMPTY")
                             .font(.custom("Courier-Bold", size: 14))
-                            .foregroundColor(.white.opacity(0.4))
+                            .foregroundColor(colors.subText)
                             .padding(.top, 10)
                     }
                 } else {
@@ -278,17 +353,17 @@ struct CommandHistorySheet: View {
                             }) {
                                 HStack {
                                     Image(systemName: "terminal")
-                                        .foregroundColor(.green)
+                                        .foregroundColor(accentColor)
                                     Text(cmd)
                                         .font(.custom("Courier", size: 14))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(colors.text)
                                     Spacer()
                                 }
                             }
-                            .listRowBackground(Color.white.opacity(0.02))
+                            .listRowBackground(colors.cardBackground)
                         }
                     }
-                    .background(Color.black)
+                    .background(colors.background)
                     .scrollContentBackground(.hidden)
                 }
             }
@@ -298,7 +373,7 @@ struct CommandHistorySheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("CLOSE") { isPresented = false }
                         .font(.custom("Courier-Bold", size: 12))
-                        .foregroundColor(.green)
+                        .foregroundColor(accentColor)
                 }
             }
         }

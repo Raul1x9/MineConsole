@@ -18,9 +18,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.raul1x9.mineconsole.viewmodels.MainViewModel
 
 @Composable
-fun BiometricLockScreen(onAuthenticateClick: () -> Unit) {
+fun BiometricLockScreen(
+    viewModel: MainViewModel,
+    onAuthenticateClick: () -> Unit
+) {
+    val themeAccent = remember(viewModel.appAccentColor.value) {
+        ThemeManager.getAccentColor(viewModel.appAccentColor.value)
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "BiometricSweep")
     val sweepAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -59,7 +67,7 @@ fun BiometricLockScreen(onAuthenticateClick: () -> Unit) {
             Text(
                 text = "MINE_CONSOLE",
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    color = Color(0xFF00FF66),
+                    color = themeAccent,
                     letterSpacing = 4.sp
                 ),
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -84,12 +92,12 @@ fun BiometricLockScreen(onAuthenticateClick: () -> Unit) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     // Outer Ring
                     drawCircle(
-                        color = Color(0xFF00FF66).copy(alpha = 0.15f),
+                        color = themeAccent.copy(alpha = 0.15f),
                         style = Stroke(width = 2.dp.toPx())
                     )
                     // Animated sweeping arc
                     drawArc(
-                        color = Color(0xFF00FF66),
+                        color = themeAccent,
                         startAngle = sweepAngle,
                         sweepAngle = 45f,
                         useCenter = false,
@@ -108,7 +116,7 @@ fun BiometricLockScreen(onAuthenticateClick: () -> Unit) {
                     Icon(
                         imageVector = Icons.Default.Fingerprint,
                         contentDescription = "Authenticate",
-                        tint = Color(0xFF00FF66),
+                        tint = themeAccent,
                         modifier = Modifier.size(56.dp)
                     )
                 }
@@ -119,8 +127,8 @@ fun BiometricLockScreen(onAuthenticateClick: () -> Unit) {
             Button(
                 onClick = onAuthenticateClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00FF66),
-                    contentColor = Color.Black
+                    containerColor = themeAccent,
+                    contentColor = if (viewModel.appAccentColor.value == "Green" || viewModel.appAccentColor.value == "Orange") Color.Black else Color.White
                 ),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier

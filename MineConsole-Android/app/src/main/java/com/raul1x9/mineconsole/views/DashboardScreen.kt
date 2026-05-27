@@ -37,6 +37,14 @@ fun DashboardScreen(
     val servers by viewModel.servers.collectAsState()
     val tailscaleConnected = viewModel.tailscaleConnected.value
 
+    val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val themeColors = remember(viewModel.appTheme.value, systemDark) {
+        ThemeManager.getThemeColors(viewModel.appTheme.value, systemDark)
+    }
+    val themeAccent = remember(viewModel.appAccentColor.value) {
+        ThemeManager.getAccentColor(viewModel.appAccentColor.value)
+    }
+
     var showingAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -46,7 +54,7 @@ fun DashboardScreen(
                     Text(
                         "MINE_CONSOLE",
                         style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFF00FF66),
+                            color = themeAccent,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp
                         )
@@ -57,7 +65,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = Color(0xFF00FF66)
+                            tint = themeAccent
                         )
                     }
                 },
@@ -66,16 +74,16 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add Server",
-                            tint = Color(0xFF00FF66)
+                            tint = themeAccent
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0C0C0C)
+                    containerColor = themeColors.background
                 )
             )
         },
-        containerColor = Color(0xFF0C0C0C)
+        containerColor = themeColors.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -142,7 +150,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.Dns,
                             contentDescription = "No Servers",
-                            tint = Color(0xFF00FF66).copy(alpha = 0.5f),
+                            tint = themeAccent.copy(alpha = 0.5f),
                             modifier = Modifier.size(64.dp)
                         )
                         
@@ -150,7 +158,7 @@ fun DashboardScreen(
 
                         Text(
                             "NO_SERVERS_DETECTED",
-                            color = Color(0xFF00FF66),
+                            color = themeAccent,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
@@ -160,7 +168,7 @@ fun DashboardScreen(
 
                         Text(
                             "Link your first Minecraft RCON server below.",
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = themeColors.subText,
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace
                         )
@@ -170,8 +178,8 @@ fun DashboardScreen(
                         Button(
                             onClick = { showingAddDialog = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF00FF66),
-                                contentColor = Color.Black
+                                containerColor = themeAccent,
+                                contentColor = if (viewModel.appAccentColor.value == "Green" || viewModel.appAccentColor.value == "Orange") Color.Black else Color.White
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -193,6 +201,8 @@ fun DashboardScreen(
                             ServerRow(
                                 server = server,
                                 tailscaleConnected = tailscaleConnected,
+                                themeColors = themeColors,
+                                themeAccent = themeAccent,
                                 onClick = { onServerClick(server) },
                                 onDelete = { viewModel.deleteServer(server) }
                             )
@@ -204,6 +214,9 @@ fun DashboardScreen(
             // Dialog for adding a server profile
             if (showingAddDialog) {
                 AddServerDialog(
+                    themeColors = themeColors,
+                    themeAccent = themeAccent,
+                    appAccentColor = viewModel.appAccentColor.value,
                     onDismiss = { showingAddDialog = false },
                     onSave = { name, ip, port, pass ->
                         viewModel.addServer(name, ip, port, pass)
@@ -219,6 +232,8 @@ fun DashboardScreen(
 fun ServerRow(
     server: ServerProfile,
     tailscaleConnected: Boolean,
+    themeColors: ThemeColors,
+    themeAccent: Color,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -226,14 +241,14 @@ fun ServerRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.03f))
-            .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+            .background(themeColors.cardBackground)
+            .border(1.dp, themeColors.border, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Glowing status indicator
-        val indicatorColor = if (tailscaleConnected) Color(0xFF00FF66) else Color.Red
+        val indicatorColor = if (tailscaleConnected) themeAccent else Color.Red
         Box(
             modifier = Modifier
                 .size(10.dp)
@@ -245,7 +260,7 @@ fun ServerRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = server.name.uppercase(),
-                color = Color.White,
+                color = themeColors.text,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace
@@ -253,7 +268,7 @@ fun ServerRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${server.ip}:${server.rconPort}",
-                color = Color.White.copy(alpha = 0.5f),
+                color = themeColors.subText,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             )
@@ -262,13 +277,13 @@ fun ServerRow(
         // Role badge
         Box(
             modifier = Modifier
-                .background(Color(0xFF00FF66).copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                .border(1.dp, Color(0xFF00FF66).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                .background(themeAccent.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                .border(1.dp, themeAccent.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
                 text = server.sharedRole.uppercase(),
-                color = Color(0xFF00FF66),
+                color = themeAccent,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
             )
@@ -289,6 +304,9 @@ fun ServerRow(
 
 @Composable
 fun AddServerDialog(
+    themeColors: ThemeColors,
+    themeAccent: Color,
+    appAccentColor: String,
     onDismiss: () -> Unit,
     onSave: (String, String, Int, String) -> Unit
 ) {
@@ -303,7 +321,7 @@ fun AddServerDialog(
         title = {
             Text(
                 "NEW CONNECTION PROFILE",
-                color = Color(0xFF00FF66),
+                color = themeAccent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
@@ -320,10 +338,10 @@ fun AddServerDialog(
                     onValueChange = { name = it },
                     label = { Text("Server Name", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = themeColors.background,
+                        unfocusedContainerColor = themeColors.background,
+                        focusedTextColor = themeColors.text,
+                        unfocusedTextColor = themeColors.text
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -333,10 +351,10 @@ fun AddServerDialog(
                     onValueChange = { ip = it },
                     label = { Text("Server IP", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = themeColors.background,
+                        unfocusedContainerColor = themeColors.background,
+                        focusedTextColor = themeColors.text,
+                        unfocusedTextColor = themeColors.text
                     ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -347,10 +365,10 @@ fun AddServerDialog(
                     onValueChange = { port = it },
                     label = { Text("RCON Port", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = themeColors.background,
+                        unfocusedContainerColor = themeColors.background,
+                        focusedTextColor = themeColors.text,
+                        unfocusedTextColor = themeColors.text
                     ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -361,10 +379,10 @@ fun AddServerDialog(
                     onValueChange = { password = it },
                     label = { Text("RCON Password", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = themeColors.background,
+                        unfocusedContainerColor = themeColors.background,
+                        focusedTextColor = themeColors.text,
+                        unfocusedTextColor = themeColors.text
                     ),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
@@ -391,8 +409,8 @@ fun AddServerDialog(
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00FF66),
-                    contentColor = Color.Black
+                    containerColor = themeAccent,
+                    contentColor = if (appAccentColor == "Green" || appAccentColor == "Orange") Color.Black else Color.White
                 ),
                 shape = RoundedCornerShape(4.dp)
             ) {
@@ -401,9 +419,9 @@ fun AddServerDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color(0xFF00FF66), fontSize = 12.sp)
+                Text("CANCEL", color = themeAccent, fontSize = 12.sp)
             }
         },
-        containerColor = Color(0xFF1E1E1E)
+        containerColor = themeColors.cardBackground
     )
 }

@@ -6,9 +6,30 @@ struct FaceIDAuthView: View {
     @State private var errorMessage: String? = nil
     @State private var isScanning = false
     
+    // Theme preferences
+    @AppStorage("appTheme") private var appTheme = "System"
+    @AppStorage("appAccentColor") private var appAccentColor = "Green"
+    @Environment(\.colorScheme) private var systemColorScheme
+    
+    private var isDark: Bool {
+        switch appTheme {
+        case "Light": return false
+        case "Dark": return true
+        default: return systemColorScheme == .dark
+        }
+    }
+    
+    private var colors: ThemeColors {
+        ThemeManager.getThemeColors(themeName: appTheme, isSystemDark: systemColorScheme == .dark)
+    }
+    
+    private var accentColor: Color {
+        ThemeManager.getAccentColor(name: appAccentColor)
+    }
+    
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            colors.background.ignoresSafeArea()
             
             VStack(spacing: 30) {
                 Spacer()
@@ -17,13 +38,13 @@ struct FaceIDAuthView: View {
                 VStack(spacing: 8) {
                     Text("MINE_CONSOLE")
                         .font(.custom("CourierNewPS-BoldMT", size: 28))
-                        .foregroundColor(.green)
+                        .foregroundColor(accentColor)
                         .tracking(4)
-                        .shadow(color: .green.opacity(0.5), radius: 8)
+                        .shadow(color: accentColor.opacity(0.5), radius: 8)
                     
-                    Text("SECURE SYSTEM ACCESS v1.0")
+                    Text("SECURE SYSTEM ACCESS v1.1.0")
                         .font(.custom("Courier", size: 12))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(colors.subText)
                 }
                 
                 Spacer()
@@ -31,11 +52,11 @@ struct FaceIDAuthView: View {
                 // Animated Biometric Scan Logo
                 ZStack {
                     Circle()
-                        .stroke(Color.green.opacity(0.2), lineWidth: 4)
+                        .stroke(accentColor.opacity(0.2), lineWidth: 4)
                         .frame(width: 140, height: 140)
                     
                     Circle()
-                        .stroke(Color.green, lineWidth: 2)
+                        .stroke(accentColor, lineWidth: 2)
                         .frame(width: 140, height: 140)
                         .scaleEffect(isScanning ? 1.15 : 1.0)
                         .opacity(isScanning ? 0.0 : 0.8)
@@ -43,8 +64,8 @@ struct FaceIDAuthView: View {
                     
                     Image(systemName: "faceid")
                         .font(.system(size: 64))
-                        .foregroundColor(.green)
-                        .shadow(color: .green.opacity(0.8), radius: 10)
+                        .foregroundColor(accentColor)
+                        .shadow(color: accentColor.opacity(0.8), radius: 10)
                 }
                 .onAppear {
                     isScanning = true
@@ -56,12 +77,12 @@ struct FaceIDAuthView: View {
                     Button(action: authenticate) {
                         Text("AUTHENTICATE SYSTEM")
                             .font(.custom("Courier-Bold", size: 16))
-                            .foregroundColor(.black)
+                            .foregroundColor(isDark ? .black : .white)
                             .padding(.vertical, 14)
                             .padding(.horizontal, 40)
-                            .background(Color.green)
+                            .background(accentColor)
                             .cornerRadius(8)
-                            .shadow(color: .green.opacity(0.5), radius: 6)
+                            .shadow(color: accentColor.opacity(0.5), radius: 6)
                     }
                     
                     if let errorMessage = errorMessage {

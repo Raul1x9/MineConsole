@@ -43,14 +43,19 @@ class MainActivity : FragmentActivity() {
         }
 
         setContent {
+            val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+            val themeColors = remember(viewModel.appTheme.value, systemDark) {
+                ThemeManager.getThemeColors(viewModel.appTheme.value, systemDark)
+            }
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = themeColors.background
                 ) {
                     when (currentScreen.value) {
                         "biometric_lock" -> {
                             BiometricLockScreen(
+                                viewModel = viewModel,
                                 onAuthenticateClick = { triggerBiometricAuthentication() }
                             )
                         }
@@ -70,6 +75,7 @@ class MainActivity : FragmentActivity() {
                             selectedServer?.let { server ->
                                 ConsoleScreen(
                                     server = server,
+                                    viewModel = viewModel,
                                     onBackClick = {
                                         currentScreen.value = "dashboard"
                                         selectedServer = null

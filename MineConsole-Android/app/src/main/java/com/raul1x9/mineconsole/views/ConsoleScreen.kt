@@ -33,12 +33,14 @@ import com.raul1x9.mineconsole.models.ServerProfile
 import com.raul1x9.mineconsole.network.ConsoleLogManager
 import com.raul1x9.mineconsole.network.RconClient
 import com.raul1x9.mineconsole.security.SecurityHelper
+import com.raul1x9.mineconsole.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConsoleScreen(
     server: ServerProfile,
+    viewModel: MainViewModel,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -58,6 +60,14 @@ fun ConsoleScreen(
 
     val listState = rememberLazyListState()
 
+    val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val themeColors = remember(viewModel.appTheme.value, systemDark) {
+        ThemeManager.getThemeColors(viewModel.appTheme.value, systemDark)
+    }
+    val themeAccent = remember(viewModel.appAccentColor.value) {
+        ThemeManager.getAccentColor(viewModel.appAccentColor.value)
+    }
+
     // Connect RCON on start
     LaunchedEffect(Unit) {
         val securityHelper = SecurityHelper.getInstance(context)
@@ -65,9 +75,26 @@ fun ConsoleScreen(
         rcon.connect(server.ip, server.rconPort, decryptedPass, server.id)
     }
 
-    // Disconnect RCON on leave
+    // Prevent screen turn-off and keep CPU awake during active Console monitoring
     DisposableEffect(Unit) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "MineConsole::RconWakeLock")
+        
+        val activity = context as? android.app.Activity
+        val window = activity?.window
+        window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        try {
+            wakeLock.acquire(10 * 60 * 1000L) // 10 minutes maximum keep alive
+        } catch (_: Exception) {}
+
         onDispose {
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            try {
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+            } catch (_: Exception) {}
             rcon.disconnect()
         }
     }
@@ -140,7 +167,7 @@ fun ConsoleScreen(
                     Text(
                         server.name.uppercase(),
                         style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFF00FF66),
+                            color = themeAccent,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
@@ -151,7 +178,7 @@ fun ConsoleScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFF00FF66)
+                            tint = themeAccent
                         )
                     }
                 },
@@ -168,11 +195,11 @@ fun ConsoleScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0C0C0C)
+                    containerColor = themeColors.background
                 )
             )
         },
-        containerColor = Color(0xFF0C0C0C)
+        containerColor = themeColors.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -183,13 +210,14 @@ fun ConsoleScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.02f))
+                    .background(themeColors.cardBackground)
+                    .border(1.dp, themeColors.border)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val statusColor = if (isAuthenticated) Color(0xFF00FF66) else Color.Red
+                    val statusColor = if (isAuthenticated) themeAccent else Color.Red
                     Box(
                         modifier = Modifier
                             .size(8.dp)
@@ -207,7 +235,7 @@ fun ConsoleScreen(
 
                 Text(
                     text = "ROLE: ${server.sharedRole.uppercase()}",
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = themeColors.subText,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 10.sp
                 )
@@ -221,15 +249,15 @@ fun ConsoleScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .background(Color(0xFF050505))
-                    .border(1.dp, Color.White.copy(alpha = 0.05f))
+                    .background(if (themeColors.background == Color(0xFFF5F5F5)) Color(0xFFE5E5E5) else Color(0xFF050505))
+                    .border(1.dp, themeColors.border)
             ) {
                 itemsIndexed(logStream) { _, log ->
                     Text(
                         text = log,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
-                        color = getLogColor(log)
+                        color = getLogColor(log, themeAccent, themeColors.text)
                     )
                 }
             }
@@ -239,7 +267,8 @@ fun ConsoleScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White.copy(alpha = 0.01f))
+                        .background(themeColors.cardBackground)
+                        .border(1.dp, themeColors.border)
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -250,8 +279,8 @@ fun ConsoleScreen(
                     presets.forEach { preset ->
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFF00FF66).copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                                .border(1.dp, Color(0xFF00FF66).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .background(themeAccent.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                                .border(1.dp, themeAccent.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                                 .clickable {
                                     commandInput = preset
                                     executeCommand()
@@ -260,10 +289,63 @@ fun ConsoleScreen(
                         ) {
                             Text(
                                 text = preset,
-                                color = Color(0xFF00FF66),
+                                color = themeAccent,
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Filtered Suggestions Row
+            val filteredSuggestions = remember(commandInput) {
+                val trimmed = commandInput.trim()
+                val availableCommands = listOf(
+                    "/help", "/give", "/gamemode", "/gamerule", "/tp", "/time", "/weather",
+                    "/difficulty", "/spawnpoint", "/setworldspawn", "/kill", "/say", "/tell",
+                    "/msg", "/w", "/me", "/list", "/op", "/deop", "/whitelist", "/ban",
+                    "/ban-ip", "/pardon", "/pardon-ip", "/kick", "/stop", "/save-all",
+                    "/save-off", "/save-on", "/seed", "/xp", "/clear", "/effect", "/enchant",
+                    "/summon", "/fill", "/clone", "/locate"
+                )
+                if (trimmed.isEmpty()) {
+                    emptyList()
+                } else if (trimmed == "/") {
+                    availableCommands
+                } else {
+                    availableCommands.filter { cmd ->
+                        cmd.lowercase().startsWith(trimmed.lowercase()) && !cmd.equals(trimmed, ignoreCase = true)
+                    }
+                }
+            }
+
+            if (filteredSuggestions.isNotEmpty()) {
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(themeColors.cardBackground)
+                        .border(1.dp, themeColors.border)
+                ) {
+                    items(filteredSuggestions.size) { index ->
+                        val suggestion = filteredSuggestions[index]
+                        Box(
+                            modifier = Modifier
+                                .background(themeAccent, RoundedCornerShape(4.dp))
+                                .clickable {
+                                    commandInput = "$suggestion "
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = suggestion,
+                                color = Color.Black,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
                             )
                         }
                     }
@@ -274,7 +356,8 @@ fun ConsoleScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.02f))
+                    .background(themeColors.cardBackground)
+                    .border(1.dp, themeColors.border)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -283,7 +366,7 @@ fun ConsoleScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White.copy(alpha = 0.04f))
+                            .background(themeColors.border)
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
@@ -291,13 +374,13 @@ fun ConsoleScreen(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.4f),
+                            tint = themeColors.text.copy(alpha = 0.4f),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "CONSOLE IS VIEW-ONLY (RESTRICTED)",
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = themeColors.text.copy(alpha = 0.4f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -308,19 +391,19 @@ fun ConsoleScreen(
                         Icon(
                             imageVector = Icons.Default.History,
                             contentDescription = "History",
-                            tint = Color(0xFF00FF66)
+                            tint = themeAccent
                         )
                     }
 
                     TextField(
                         value = commandInput,
                         onValueChange = { commandInput = it },
-                        placeholder = { Text("TYPE COMMAND...", color = Color.White.copy(alpha = 0.3f), fontSize = 12.sp) },
+                        placeholder = { Text("TYPE COMMAND...", color = themeColors.subText, fontSize = 12.sp) },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
+                            focusedContainerColor = themeColors.background,
+                            unfocusedContainerColor = themeColors.background,
+                            focusedTextColor = themeColors.text,
+                            unfocusedTextColor = themeColors.text
                         ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { executeCommand() }),
@@ -328,18 +411,19 @@ fun ConsoleScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(6.dp))
+                            .border(1.dp, themeColors.border, RoundedCornerShape(6.dp))
                     )
 
                     IconButton(
                         onClick = { executeCommand() },
                         modifier = Modifier
                             .size(36.dp)
-                            .background(Color(0xFF00FF66), RoundedCornerShape(6.dp))
+                            .background(themeAccent, RoundedCornerShape(6.dp))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Send,
                             contentDescription = "Send",
-                            tint = Color.Black,
+                            tint = if (viewModel.appAccentColor.value == "Green" || viewModel.appAccentColor.value == "Orange") Color.Black else Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -350,6 +434,8 @@ fun ConsoleScreen(
         if (showingHistory) {
             CommandHistoryDialog(
                 history = commandHistory,
+                themeColors = themeColors,
+                themeAccent = themeAccent,
                 onDismiss = { showingHistory = false },
                 onSelectCommand = {
                     commandInput = it
@@ -360,19 +446,21 @@ fun ConsoleScreen(
     }
 }
 
-private fun getLogColor(line: String): Color {
+private fun getLogColor(line: String, themeAccent: Color, textCol: Color): Color {
     return when {
-        line.startsWith(">") -> Color(0xFF00FF66)
+        line.startsWith(">") -> themeAccent
         line.contains("[Error]") || line.contains("[Security Alert]") -> Color.Red
-        line.contains("[System]") -> Color.Yellow
-        line.contains("joined the game") || line.contains("left the game") -> Color.Cyan
-        else -> Color.White
+        line.contains("[System]") -> Color(0xFFFF9900) // Clear gold color for dynamic mode readability
+        line.contains("joined the game") || line.contains("left the game") -> Color(0xFF0066CC) // Deep visible blue
+        else -> textCol
     }
 }
 
 @Composable
 fun CommandHistoryDialog(
     history: List<String>,
+    themeColors: ThemeColors,
+    themeAccent: Color,
     onDismiss: () -> Unit,
     onSelectCommand: (String) -> Unit
 ) {
@@ -381,7 +469,7 @@ fun CommandHistoryDialog(
         title = {
             Text(
                 "COMMAND_HISTORY",
-                color = Color(0xFF00FF66),
+                color = themeAccent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
@@ -397,7 +485,7 @@ fun CommandHistoryDialog(
                 ) {
                     Text(
                         "HISTORY_EMPTY",
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = themeColors.subText,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp
                     )
@@ -412,20 +500,21 @@ fun CommandHistoryDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onSelectCommand(cmd) }
-                                .background(Color.White.copy(alpha = 0.02f), RoundedCornerShape(4.dp))
+                                .background(themeColors.background, RoundedCornerShape(4.dp))
+                                .border(1.dp, themeColors.border, RoundedCornerShape(4.dp))
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.List,
                                 contentDescription = null,
-                                tint = Color(0xFF00FF66),
+                                tint = themeAccent,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = cmd,
-                                color = Color.White,
+                                color = themeColors.text,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 13.sp
                             )
@@ -437,9 +526,9 @@ fun CommandHistoryDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CLOSE", color = Color(0xFF00FF66), fontSize = 12.sp)
+                Text("CLOSE", color = themeAccent, fontSize = 12.sp)
             }
         },
-        containerColor = Color(0xFF1E1E1E)
+        containerColor = themeColors.cardBackground
     )
 }

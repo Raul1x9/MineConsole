@@ -36,6 +36,14 @@ fun SettingsScreen(
     val biometricsEnabled = viewModel.biometricsEnabled.value
     val tailscaleConnected = viewModel.tailscaleConnected.value
 
+    val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val themeColors = remember(viewModel.appTheme.value, systemDark) {
+        ThemeManager.getThemeColors(viewModel.appTheme.value, systemDark)
+    }
+    val themeAccent = remember(viewModel.appAccentColor.value) {
+        ThemeManager.getAccentColor(viewModel.appAccentColor.value)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -43,7 +51,7 @@ fun SettingsScreen(
                     Text(
                         "SETTINGS",
                         style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFF00FF66),
+                            color = themeAccent,
                             letterSpacing = 2.sp
                         )
                     )
@@ -53,16 +61,16 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFF00FF66)
+                            tint = themeAccent
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0C0C0C)
+                    containerColor = themeColors.background
                 )
             )
         },
-        containerColor = Color(0xFF0C0C0C)
+        containerColor = themeColors.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -73,13 +81,13 @@ fun SettingsScreen(
         ) {
             // General Settings Card
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                colors = CardDefaults.cardColors(containerColor = themeColors.cardBackground),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "SYSTEM CONFIGURATION",
-                        style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF00FF66))
+                        style = MaterialTheme.typography.labelSmall.copy(color = themeAccent)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -90,10 +98,10 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Secure Biometrics", color = Color.White)
+                            Text("Secure Biometrics", color = themeColors.text)
                             Text(
                                 "Require Face/Fingerprint unlock",
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = themeColors.subText,
                                 fontSize = 11.sp
                             )
                         }
@@ -101,13 +109,13 @@ fun SettingsScreen(
                             checked = biometricsEnabled,
                             onCheckedChange = { viewModel.setBiometricsEnabled(it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.Black,
-                                checkedTrackColor = Color(0xFF00FF66)
+                                checkedThumbColor = themeColors.background,
+                                checkedTrackColor = themeAccent
                             )
                         )
                     }
 
-                    Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.05f))
+                    Divider(modifier = Modifier.padding(vertical = 12.dp), color = themeColors.border)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -115,10 +123,10 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Tailscale Link", color = Color.White)
+                            Text("Tailscale Link", color = themeColors.text)
                             Text(
                                 "Simulate active WireGuard tunneling",
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = themeColors.subText,
                                 fontSize = 11.sp
                             )
                         }
@@ -126,30 +134,111 @@ fun SettingsScreen(
                             checked = tailscaleConnected,
                             onCheckedChange = { viewModel.setTailscaleConnected(it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.Black,
-                                checkedTrackColor = Color(0xFF00FF66)
+                                checkedThumbColor = themeColors.background,
+                                checkedTrackColor = themeAccent
                             )
                         )
                     }
                 }
             }
 
-            // Share Settings Card
+            // Theme Personalization Card
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                colors = CardDefaults.cardColors(containerColor = themeColors.cardBackground),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "ROLE-BASED SHARING LAB",
-                        style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF00FF66))
+                        text = "THEME PERSONALIZATION",
+                        style = MaterialTheme.typography.labelSmall.copy(color = themeAccent)
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        "Generate a restricted access token link for guest moderators.",
-                        color = Color.White.copy(alpha = 0.6f),
+                        text = "APPEARANCE MODE",
+                        color = themeColors.subText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val themes = listOf("System", "Light", "Dark")
+                        themes.forEach { theme ->
+                            val active = viewModel.appTheme.value == theme
+                            Button(
+                                onClick = { viewModel.setAppTheme(theme) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (active) themeAccent.copy(alpha = 0.15f) else Color.Transparent,
+                                    contentColor = if (active) themeAccent else themeColors.text.copy(alpha = 0.6f)
+                                ),
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (active) themeAccent else themeColors.border,
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                            ) {
+                                Text(theme, fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "ACCENT COLOR",
+                        color = themeColors.subText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val colors = listOf("Green", "Blue", "Red", "Purple", "Orange")
+                        colors.forEach { colorName ->
+                            val colorValue = ThemeManager.getAccentColor(colorName)
+                            val active = viewModel.appAccentColor.value == colorName
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(32.dp)
+                                    .background(colorValue, RoundedCornerShape(6.dp))
+                                    .border(
+                                        width = if (active) 3.dp else 1.dp,
+                                        color = if (active) themeColors.text else Color.Transparent,
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable { viewModel.setAppAccentColor(colorName) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Share Settings Card
+            Card(
+                colors = CardDefaults.cardColors(containerColor = themeColors.cardBackground),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "ROLE-BASED SHARING LAB",
+                        style = MaterialTheme.typography.labelSmall.copy(color = themeAccent)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Generate a restricted access token link for guest moderators.",
+                        color = themeColors.subText,
                         fontSize = 11.sp
                     )
 
@@ -170,15 +259,15 @@ fun SettingsScreen(
                                     isCopied = false
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (active) Color(0xFF00FF66).copy(alpha = 0.15f) else Color.Transparent,
-                                    contentColor = if (active) Color(0xFF00FF66) else Color.White.copy(alpha = 0.5f)
+                                    containerColor = if (active) themeAccent.copy(alpha = 0.15f) else Color.Transparent,
+                                    contentColor = if (active) themeAccent else themeColors.text.copy(alpha = 0.5f)
                                 ),
                                 shape = RoundedCornerShape(6.dp),
                                 modifier = Modifier
                                     .weight(1f)
                                     .border(
                                         width = 1.dp,
-                                        color = if (active) Color(0xFF00FF66) else Color.White.copy(alpha = 0.1f),
+                                        color = if (active) themeAccent else themeColors.border,
                                         shape = RoundedCornerShape(6.dp)
                                     )
                             ) {
@@ -195,8 +284,8 @@ fun SettingsScreen(
                             isCopied = false
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF00FF66),
-                            contentColor = Color.Black
+                            containerColor = themeAccent,
+                            contentColor = if (appAccentColor == "Green" || appAccentColor == "Orange") Color.Black else Color.White
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -211,7 +300,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                                .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(6.dp))
+                                .border(1.dp, themeColors.border, RoundedCornerShape(6.dp))
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -236,7 +325,7 @@ fun SettingsScreen(
                                 Icon(
                                     imageVector = if (isCopied) Icons.Default.Check else Icons.Default.ContentCopy,
                                     contentDescription = "Copy",
-                                    tint = if (isCopied) Color(0xFF00FF66) else Color.White.copy(alpha = 0.5f)
+                                    tint = if (isCopied) themeAccent else Color.White.copy(alpha = 0.5f)
                                 )
                             }
                         }

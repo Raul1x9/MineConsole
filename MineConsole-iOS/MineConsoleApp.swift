@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct MineConsoleApp: App {
     @AppStorage("biometricsEnabled") private var biometricsEnabled = false
+    @AppStorage("appTheme") private var appTheme = "System"
     @State private var isUnlocked = false
     
     // Configure SwiftData Database Container
@@ -35,7 +36,7 @@ struct MineConsoleApp: App {
                     DashboardView()
                 }
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(AppTheme(rawValue: appTheme)?.colorScheme)
         }
         .modelContainer(sharedModelContainer)
     }
