@@ -56,7 +56,7 @@ class RconClient {
         }
     }
 
-    fun disconnect() {
+    fun disconnect(intentional: Boolean = false) {
         try {
             socket?.close()
         } catch (_: Exception) {}
@@ -65,7 +65,15 @@ class RconClient {
         inputStream = null
         _isConnected.value = false
         _isAuthenticated.value = false
-        addLog("[System] Connection cancelled.")
+        
+        synchronized(this) {
+            callbacks.values.forEach { it.invoke(null, Exception("Disconnected")) }
+            callbacks.clear()
+        }
+
+        if (intentional) {
+            addLog("[System] Connection cancelled.")
+        }
     }
 
     fun appendLog(message: String) {
@@ -100,16 +108,28 @@ class RconClient {
         }
         
         val cmdPacket = RconPacket(id = id, type = 2, payload = command)
-        sendPacket(cmdPacket)
+        sendPacket(cmdPacket) { error ->
+            if (error != null) {
+                synchronized(this) { callbacks.remove(id) }
+                completion(null, error)
+            }
+        }
     }
 
-    private fun sendPacket(packet: RconPacket) {
+    private fun sendPacket(packet: RconPacket, onCompletion: ((Exception?) -> Unit)? = null) {
         scope.launch(Dispatchers.IO) {
             try {
-                outputStream?.write(packet.encode())
-                outputStream?.flush()
+                val os = outputStream
+                if (os == null) {
+                    onCompletion?.invoke(Exception("Output stream is null"))
+                    return@launch
+                }
+                os.write(packet.encode())
+                os.flush()
+                onCompletion?.invoke(null)
             } catch (e: Exception) {
                 addLog("[Error] Failed to send packet: ${e.javaClass.simpleName} - ${e.localizedMessage}")
+                onCompletion?.invoke(e)
                 disconnect()
             }
         }

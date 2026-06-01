@@ -17,6 +17,12 @@ object ConsoleLogManager {
         val currentLogs = _logs.value.toMutableMap()
         val serverLogs = currentLogs[serverId]?.toMutableList() ?: mutableListOf()
         serverLogs.add(message)
+        
+        // Keep only last 1000 lines to prevent memory issues
+        if (serverLogs.size > 1000) {
+            serverLogs.removeAt(0)
+        }
+
         currentLogs[serverId] = serverLogs
         _logs.value = currentLogs
     }

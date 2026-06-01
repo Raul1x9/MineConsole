@@ -40,6 +40,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var appAccentColor = mutableStateOf(sharedPrefs.getString("app_accent_color", "Green") ?: "Green")
         private set
 
+    var currentScreen = mutableStateOf("dashboard")
+    var selectedServer = mutableStateOf<ServerProfile?>(null)
+
     fun setBiometricsEnabled(enabled: Boolean) {
         biometricsEnabled.value = enabled
         sharedPrefs.edit().putBoolean("biometrics_enabled", enabled).apply()

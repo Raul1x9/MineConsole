@@ -95,7 +95,7 @@ fun ConsoleScreen(
                     wakeLock.release()
                 }
             } catch (_: Exception) {}
-            rcon.disconnect()
+            rcon.disconnect(true)
         }
     }
 

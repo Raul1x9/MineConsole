@@ -18,6 +18,7 @@ import com.raul1x9.mineconsole.views.BiometricLockScreen
 import com.raul1x9.mineconsole.views.ConsoleScreen
 import com.raul1x9.mineconsole.views.DashboardScreen
 import com.raul1x9.mineconsole.views.SettingsScreen
+import com.raul1x9.mineconsole.views.ThemeManager
 import java.util.concurrent.Executor
 
 class MainActivity : FragmentActivity() {
@@ -25,10 +26,6 @@ class MainActivity : FragmentActivity() {
     private lateinit var executor: Executor
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
-
-    // Navigation state
-    private var currentScreen = mutableStateOf("dashboard")
-    private var selectedServer: ServerProfile? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +35,7 @@ class MainActivity : FragmentActivity() {
 
         // Relaunch biometric prompt on startup if enabled
         if (viewModel.biometricsEnabled.value) {
-            currentScreen.value = "biometric_lock"
+            viewModel.currentScreen.value = "biometric_lock"
             triggerBiometricAuthentication()
         }
 
@@ -52,7 +49,7 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = themeColors.background
                 ) {
-                    when (currentScreen.value) {
+                    when (viewModel.currentScreen.value) {
                         "biometric_lock" -> {
                             BiometricLockScreen(
                                 viewModel = viewModel,
@@ -63,33 +60,33 @@ class MainActivity : FragmentActivity() {
                             DashboardScreen(
                                 viewModel = viewModel,
                                 onServerClick = { server ->
-                                    selectedServer = server
-                                    currentScreen.value = "console"
+                                    viewModel.selectedServer.value = server
+                                    viewModel.currentScreen.value = "console"
                                 },
                                 onSettingsClick = {
-                                    currentScreen.value = "settings"
+                                    viewModel.currentScreen.value = "settings"
                                 }
                             )
                         }
                         "console" -> {
-                            selectedServer?.let { server ->
+                            viewModel.selectedServer.value?.let { server ->
                                 ConsoleScreen(
                                     server = server,
                                     viewModel = viewModel,
                                     onBackClick = {
-                                        currentScreen.value = "dashboard"
-                                        selectedServer = null
+                                        viewModel.currentScreen.value = "dashboard"
+                                        viewModel.selectedServer.value = null
                                     }
                                 )
                             } ?: run {
-                                currentScreen.value = "dashboard"
+                                viewModel.currentScreen.value = "dashboard"
                             }
                         }
                         "settings" -> {
                             SettingsScreen(
                                 viewModel = viewModel,
                                 onBackClick = {
-                                    currentScreen.value = "dashboard"
+                                    viewModel.currentScreen.value = "dashboard"
                                 }
                             )
                         }
@@ -110,14 +107,14 @@ class MainActivity : FragmentActivity() {
                     if (errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS || 
                         errorCode == BiometricPrompt.ERROR_HW_NOT_PRESENT ||
                         errorCode == BiometricPrompt.ERROR_HW_UNAVAILABLE) {
-                        currentScreen.value = "dashboard"
+                        viewModel.currentScreen.value = "dashboard"
                     }
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
                     Toast.makeText(applicationContext, "Authentication succeeded!", Toast.LENGTH_SHORT).show()
-                    currentScreen.value = "dashboard"
+                    viewModel.currentScreen.value = "dashboard"
                 }
 
                 override fun onAuthenticationFailed() {
@@ -139,7 +136,7 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Biometrics unavailable: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             // Fallback in case of device emulation where biometrics aren't configured
-            currentScreen.value = "dashboard"
+            viewModel.currentScreen.value = "dashboard"
         }
     }
 }
