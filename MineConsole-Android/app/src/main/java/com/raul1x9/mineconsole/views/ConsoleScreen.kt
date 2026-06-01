@@ -301,24 +301,7 @@ fun ConsoleScreen(
 
             // Filtered Suggestions Row
             val filteredSuggestions = remember(commandInput) {
-                val trimmed = commandInput.trim()
-                val availableCommands = listOf(
-                    "/help", "/give", "/gamemode", "/gamerule", "/tp", "/time", "/weather",
-                    "/difficulty", "/spawnpoint", "/setworldspawn", "/kill", "/say", "/tell",
-                    "/msg", "/w", "/me", "/list", "/op", "/deop", "/whitelist", "/ban",
-                    "/ban-ip", "/pardon", "/pardon-ip", "/kick", "/stop", "/save-all",
-                    "/save-off", "/save-on", "/seed", "/xp", "/clear", "/effect", "/enchant",
-                    "/summon", "/fill", "/clone", "/locate"
-                )
-                if (trimmed.isEmpty()) {
-                    emptyList()
-                } else if (trimmed == "/") {
-                    availableCommands
-                } else {
-                    availableCommands.filter { cmd ->
-                        cmd.lowercase().startsWith(trimmed.lowercase()) && !cmd.equals(trimmed, ignoreCase = true)
-                    }
-                }
+                com.raul1x9.mineconsole.network.CommandAutocomplete.getSuggestions(commandInput)
             }
 
             if (filteredSuggestions.isNotEmpty()) {
@@ -336,7 +319,13 @@ fun ConsoleScreen(
                             modifier = Modifier
                                 .background(themeAccent, RoundedCornerShape(4.dp))
                                 .clickable {
-                                    commandInput = "$suggestion "
+                                    val parts = commandInput.split(" ").toMutableList()
+                                    if (parts.isNotEmpty()) {
+                                        parts[parts.size - 1] = suggestion
+                                        commandInput = parts.joinToString(" ") + " "
+                                    } else {
+                                        commandInput = "$suggestion "
+                                    }
                                 }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {

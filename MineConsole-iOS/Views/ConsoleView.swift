@@ -46,10 +46,16 @@ struct ConsoleView: View {
     }
     
     private var filteredSuggestions: [String] {
-        guard !commandInput.isEmpty else { return [] }
-        let trimmed = commandInput.lowercased()
-        return autocompleteCommands.filter { cmd in
-            cmd.lowercased().hasPrefix(trimmed) && cmd.lowercased() != trimmed
+        return CommandAutocomplete.getSuggestions(for: commandInput)
+    }
+    
+    private func applySuggestion(_ suggestion: String) {
+        var parts = commandInput.components(separatedBy: " ")
+        if !parts.isEmpty {
+            parts[parts.count - 1] = suggestion
+            commandInput = parts.joined(separator: " ") + " "
+        } else {
+            commandInput = suggestion + " "
         }
     }
     
@@ -130,7 +136,7 @@ struct ConsoleView: View {
                             ForEach(filteredSuggestions, id: \.self) { suggestion in
                                 Button(action: {
                                     impactLight.impactOccurred()
-                                    commandInput = suggestion + " "
+                                    applySuggestion(suggestion)
                                 }) {
                                     Text(suggestion)
                                         .font(.custom("Courier-Bold", size: 12))
