@@ -15,6 +15,7 @@ workflows:
           xcodegen generate
       - name: Build iOS Simulator App
         script: |
+          set -e
           xcodebuild \
             -project MineConsole.xcodeproj \
             -scheme MineConsole \
@@ -40,6 +41,7 @@ workflows:
           xcodegen generate
       - name: Build Unsigned iOS App (Physical Device)
         script: |
+          set -e
           rm -rf build/
           xcodebuild clean build \
             -project MineConsole.xcodeproj \
@@ -100,6 +102,7 @@ workflows:
           fi
       - name: Build iOS IPA Package
         script: |
+          set -e
           xcode-project build-ipa \
             -workspace MineConsole.xcodeproj/project.xcworkspace \
             -scheme MineConsole

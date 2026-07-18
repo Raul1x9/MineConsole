@@ -48,7 +48,7 @@ public final class CommandAutocomplete {
     private static let selectors = ["@p", "@a", "@r", "@s", "@e"]
     
     public static func getSuggestions(for input: String) -> [String] {
-        if input.trimingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return rootCommands
         }
         
