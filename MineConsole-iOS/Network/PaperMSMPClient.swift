@@ -12,6 +12,28 @@ public final class PaperMSMPClient: ObservableObject {
     private var serverId: UUID?
     private var callbacks: [Int: (String?, Error?) -> Void] = [:]
     
+    private struct PendingCmdInfo {
+        let originalCommand: String
+        let successMessage: String?
+        let formatter: (([String: Any]) -> String)?
+    }
+    
+    private var pendingCommandInfos: [Int: PendingCmdInfo] = [:]
+    
+    private struct TranslatedCommand {
+        let method: String
+        let params: Any
+        let successMessage: String?
+        let formatter: (([String: Any]) -> String)?
+        
+        init(method: String, params: Any, successMessage: String? = nil, formatter: (([String: Any]) -> String)? = nil) {
+            self.method = method
+            self.params = params
+            self.successMessage = successMessage
+            self.formatter = formatter
+        }
+    }
+    
     public init() {}
     
     public func connect(host: String, port: Int, secret: String, useTLS: Bool, serverId: UUID? = nil) {
@@ -82,10 +104,13 @@ public final class PaperMSMPClient: ObservableObject {
         let reqID = currentRequestID
         callbacks[reqID] = completion
         
+        let translated = translateCommand(command)
+        pendingCommandInfos[reqID] = PendingCmdInfo(originalCommand: command, successMessage: translated.successMessage, formatter: translated.formatter)
+        
         let payload: [String: Any] = [
             "jsonrpc": "2.0",
-            "method": "minecraft:server/run_command",
-            "params": ["command": command],
+            "method": translated.method,
+            "params": translated.params,
             "id": reqID
         ]
         
@@ -100,8 +125,126 @@ public final class PaperMSMPClient: ObservableObject {
             if let error = error {
                 completion(nil, error)
                 self?.callbacks.removeValue(forKey: reqID)
+                self?.pendingCommandInfos.removeValue(forKey: reqID)
             }
         }
+    }
+    
+    private func translateCommand(_ input: String) -> TranslatedCommand {
+        let clean = input.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "/", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = clean.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        if parts.isEmpty {
+            return TranslatedCommand(method: "minecraft:server/run_command", params: ["command": input])
+        }
+        
+        let base = parts[0].lowercased()
+        
+        switch base {
+        case "list":
+            return TranslatedCommand(
+                method: "minecraft:players",
+                params: [String: Any](),
+                formatter: { response in
+                    let result = response["result"]
+                    let playersArray: [[String: Any]]?
+                    if let resultDict = result as? [String: Any] {
+                        playersArray = (resultDict["players"] as? [[String: Any]]) ?? (resultDict["list"] as? [[String: Any]])
+                    } else {
+                        playersArray = result as? [[String: Any]]
+                    }
+                    
+                    if let players = playersArray, !players.isEmpty {
+                        let names = players.compactMap { $0["name"] as? String }.filter { !$0.isEmpty }
+                        return "Connected Players: \(names.joined(separator: ", "))"
+                    }
+                    
+                    // Try parsing as string list
+                    if let resultDict = result as? [String: Any], let playersStr = resultDict["players"] as? [String] {
+                        return "Connected Players: \(playersStr.joined(separator: ", "))"
+                    } else if let playersStr = result as? [String] {
+                        return "Connected Players: \(playersStr.joined(separator: ", "))"
+                    }
+                    
+                    return "No players online."
+                }
+            )
+        case "whitelist":
+            if parts.count >= 2 {
+                let sub = parts[1].lowercased()
+                if sub == "add", parts.count >= 3 {
+                    let player = parts[2]
+                    return TranslatedCommand(
+                        method = "minecraft:allowlist/add",
+                        params: [[["name": player]]],
+                        successMessage: "Added \(player) to the whitelist."
+                    )
+                } else if sub == "remove", parts.count >= 3 {
+                    let player = parts[2]
+                    return TranslatedCommand(
+                        method = "minecraft:allowlist/remove",
+                        params: [[["name": player]]],
+                        successMessage: "Removed \(player) from the whitelist."
+                    )
+                } else if sub == "list" {
+                    return TranslatedCommand(
+                        method = "minecraft:allowlist/list",
+                        params: [String: Any](),
+                        formatter: { response in
+                            let result = response["result"]
+                            let playersArray = (result as? [[String: Any]]) ?? ((result as? [String: Any])?["players"] as? [[String: Any]])
+                            
+                            if let players = playersArray, !players.isEmpty {
+                                let names = players.compactMap { $0["name"] as? String }.filter { !$0.isEmpty }
+                                return "Whitelisted Players: \(names.joined(separator: ", "))"
+                            }
+                            
+                            if let playersStr = result as? [String] {
+                                return "Whitelisted Players: \(playersStr.joined(separator: ", "))"
+                            }
+                            
+                            return "Whitelist is empty."
+                        }
+                    )
+                }
+            }
+        case "op":
+            if parts.count >= 2 {
+                let player = parts[1]
+                return TranslatedCommand(
+                    method = "minecraft:operators/add",
+                    params: [[["name": player]]],
+                    successMessage: "Opped \(player)."
+                )
+            }
+        case "deop":
+            if parts.count >= 2 {
+                let player = parts[1]
+                return TranslatedCommand(
+                    method = "minecraft:operators/remove",
+                    params: [[["name": player]]],
+                    successMessage: "De-opped \(player)."
+                )
+            }
+        case "stop":
+            return TranslatedCommand(
+                method = "minecraft:server/stop",
+                params: [String: Any](),
+                successMessage: "Stopping the server..."
+            )
+        case "save-all":
+            return TranslatedCommand(
+                method = "minecraft:server/save",
+                params: [String: Any](),
+                successMessage: "Saving the world..."
+            )
+        default:
+            break
+        }
+        
+        return TranslatedCommand(
+            method = "minecraft:server/run_command",
+            params: ["command": input]
+        )
     }
     
     private func startReceive() {
@@ -136,10 +279,15 @@ public final class PaperMSMPClient: ObservableObject {
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 if let id = json["id"] as? Int {
                     let callback = callbacks.removeValue(forKey: id)
+                    let cmdInfo = pendingCommandInfos.removeValue(forKey: id)
                     
                     if let resultObj = json["result"] {
                         let output: String
-                        if let dict = resultObj as? [String: Any], let out = dict["output"] as? String {
+                        if let formatter = cmdInfo?.formatter {
+                            output = formatter(json)
+                        } else if let successMsg = cmdInfo?.successMessage {
+                            output = successMsg
+                        } else if let dict = resultObj as? [String: Any], let out = dict["output"] as? String {
                             output = out
                         } else {
                             output = String(describing: resultObj)
@@ -147,8 +295,17 @@ public final class PaperMSMPClient: ObservableObject {
                         self.addLog(output)
                         callback?(output, nil)
                     } else if let errorObj = json["error"] as? [String: Any] {
+                        let errorCode = errorObj["code"] as? Int ?? 0
                         let errorMsg = errorObj["message"] as? String ?? "Unknown error"
-                        self.addLog("[Error] \(errorMsg)")
+                        
+                        let displayMsg: String
+                        if errorCode == -32601 {
+                            displayMsg = "[Error] Command execution failed: Vanilla MSMP does not support running arbitrary console commands. Try using specific supported commands like /list, /whitelist, /op, /deop, /stop, or /save-all."
+                        } else {
+                            displayMsg = "[Error] \(errorMsg)"
+                        }
+                        
+                        self.addLog(displayMsg)
                         callback?(nil, NSError(domain: "PaperMSMP", code: -3, userInfo: [NSLocalizedDescriptionKey: errorMsg]))
                     }
                 } else if let method = json["method"] as? String {
