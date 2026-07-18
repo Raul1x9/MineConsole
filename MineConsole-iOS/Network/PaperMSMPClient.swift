@@ -226,13 +226,13 @@ public final class PaperMSMPClient: ObservableObject {
             }
         case "stop":
             return TranslatedCommand(
-                method = "minecraft:server/stop",
+                method: "minecraft:server/stop",
                 params: [String: Any](),
                 successMessage: "Stopping the server..."
             )
         case "save-all":
             return TranslatedCommand(
-                method = "minecraft:server/save",
+                method: "minecraft:server/save",
                 params: [String: Any](),
                 successMessage: "Saving the world..."
             )
@@ -241,7 +241,7 @@ public final class PaperMSMPClient: ObservableObject {
         }
         
         return TranslatedCommand(
-            method = "minecraft:server/run_command",
+            method: "minecraft:server/run_command",
             params: ["command": input]
         )
     }
