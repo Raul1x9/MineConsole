@@ -275,8 +275,8 @@ struct AddServerSheet: View {
                                     Text("PAPER MSMP").tag("PAPER_MSMP")
                                 }
                                 .pickerStyle(.segmented)
-                                .onChange(of: connectionType) {
-                                    port = (connectionType == "RCON") ? "25575" : "25585"
+                                .onChange(of: connectionType) { newValue in
+                                    port = (newValue == "RCON") ? "25575" : "25585"
                                 }
                             }
                             

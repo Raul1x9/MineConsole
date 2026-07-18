@@ -107,12 +107,11 @@ public final class PaperMSMPClient: ObservableObject {
         let translated = translateCommand(command)
         pendingCommandInfos[reqID] = PendingCmdInfo(originalCommand: command, successMessage: translated.successMessage, formatter: translated.formatter)
         
-        let payload: [String: Any] = [
-            "jsonrpc": "2.0",
-            "method": translated.method,
-            "params": translated.params,
-            "id": reqID
-        ]
+        var payload: [String: Any] = [:]
+        payload["jsonrpc"] = "2.0"
+        payload["method"] = translated.method
+        payload["params"] = translated.params
+        payload["id"] = reqID
         
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let jsonString = String(data: data, encoding: .utf8) else {
@@ -144,7 +143,7 @@ public final class PaperMSMPClient: ObservableObject {
             return TranslatedCommand(
                 method: "minecraft:players",
                 params: [String: Any](),
-                formatter: { response in
+                formatter: { (response: [String: Any]) -> String in
                     let result = response["result"]
                     let playersArray: [[String: Any]]?
                     if let resultDict = result as? [String: Any] {
@@ -189,7 +188,7 @@ public final class PaperMSMPClient: ObservableObject {
                     return TranslatedCommand(
                         method = "minecraft:allowlist/list",
                         params: [String: Any](),
-                        formatter: { response in
+                        formatter: { (response: [String: Any]) -> String in
                             let result = response["result"]
                             let playersArray = (result as? [[String: Any]]) ?? ((result as? [String: Any])?["players"] as? [[String: Any]])
                             
