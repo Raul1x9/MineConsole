@@ -24,7 +24,7 @@ interface ServerDao {
     suspend fun deleteServer(server: ServerProfile)
 }
 
-@Database(entities = [ServerProfile::class], version = 1, exportSchema = false)
+@Database(entities = [ServerProfile::class], version = 2, exportSchema = false)
 abstract class ServerDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao
 
@@ -38,7 +38,9 @@ abstract class ServerDatabase : RoomDatabase() {
                     context.applicationContext,
                     ServerDatabase::class.java,
                     "mineconsole_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -218,8 +220,8 @@ fun DashboardScreen(
                     themeAccent = themeAccent,
                     appAccentColor = viewModel.appAccentColor.value,
                     onDismiss = { showingAddDialog = false },
-                    onSave = { name, ip, port, pass ->
-                        viewModel.addServer(name, ip, port, pass)
+                    onSave = { name, ip, port, pass, connectionType, useTLS ->
+                        viewModel.addServer(name, ip, port, pass, connectionType, useTLS)
                         showingAddDialog = false
                     }
                 )
@@ -266,8 +268,9 @@ fun ServerRow(
                 fontFamily = FontFamily.Monospace
             )
             Spacer(modifier = Modifier.height(2.dp))
+            val connTypeLabel = if (server.connectionType == "PAPER_MSMP") "MSMP" else "RCON"
             Text(
-                text = "${server.ip}:${server.rconPort}",
+                text = "${server.ip}:${server.rconPort} ($connTypeLabel)",
                 color = themeColors.subText,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -308,30 +311,143 @@ fun AddServerDialog(
     themeAccent: Color,
     appAccentColor: String,
     onDismiss: () -> Unit,
-    onSave: (String, String, Int, String) -> Unit
+    onSave: (String, String, Int, String, String, Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var ip by remember { mutableStateOf("") }
+    var connectionType by remember { mutableStateOf("RCON") } // "RCON" or "PAPER_MSMP"
     var port by remember { mutableStateOf("25575") }
     var password by remember { mutableStateOf("") }
+    var useTLS by remember { mutableStateOf(true) }
     var showError by remember { mutableStateOf(false) }
+    var showingHelp by remember { mutableStateOf(false) }
+
+    if (showingHelp) {
+        AlertDialog(
+            onDismissRequest = { showingHelp = false },
+            title = {
+                Text(
+                    "CONNECTION SETUP GUIDE",
+                    color = themeAccent,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
+            },
+            text = {
+                val scrollState = rememberScrollState()
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(scrollState)
+                ) {
+                    Text(
+                        text = "1. RCON (Legacy)",
+                        fontWeight = FontWeight.Bold,
+                        color = themeColors.text,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "A legacy protocol for executing remote commands. To enable, add to server.properties:\n" +
+                               "enable-rcon=true\nrcon.port=25575\nrcon.password=your_secure_password",
+                        color = themeColors.subText,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = "2. Paper MSMP (Modern)",
+                        fontWeight = FontWeight.Bold,
+                        color = themeColors.text,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "A modern JSON-RPC protocol running over WebSockets, native to PaperMC and modern Minecraft. Setup in server.properties:\n" +
+                               "management-server-enabled=true\n" +
+                               "management-server-host=0.0.0.0\n" +
+                               "management-server-port=25585\n" +
+                               "management-server-secret=your_40_char_token\n" +
+                               "management-server-tls-enabled=true",
+                        color = themeColors.subText,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = "3. TLS (WSS) Encryption Options",
+                        fontWeight = FontWeight.Bold,
+                        color = themeColors.text,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "• Scenario A (No TLS - Easiest for Local/VPN):\n" +
+                               "Set 'management-server-tls-enabled=false' in server.properties and turn off the TLS switch in this app. Standard unencrypted WebSocket (ws://) will be used.\n\n" +
+                               "• Scenario B (TLS Enabled - Most Secure):\n" +
+                               "Set 'management-server-tls-enabled=true' in server.properties and turn on the TLS switch in this app. Fully encrypted WebSocket (wss://) will be used.",
+                        color = themeColors.subText,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showingHelp = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = themeAccent),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text("OK, UNDERSTOOD", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = themeColors.cardBackground
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                "NEW CONNECTION PROFILE",
-                color = themeAccent,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "NEW CONNECTION PROFILE",
+                    color = themeAccent,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp
+                )
+                IconButton(
+                    onClick = { showingHelp = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Help Guide",
+                        tint = themeAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         },
         text = {
+            val scrollState = rememberScrollState()
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
             ) {
                 TextField(
                     value = name,
@@ -349,21 +465,74 @@ fun AddServerDialog(
                 TextField(
                     value = ip,
                     onValueChange = { ip = it },
-                    label = { Text("Server IP", fontSize = 12.sp) },
+                    label = { Text("Server IP / Hostname", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = themeColors.background,
                         unfocusedContainerColor = themeColors.background,
                         focusedTextColor = themeColors.text,
                         unfocusedTextColor = themeColors.text
                     ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Connection Type Selector
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "CONNECTION TYPE",
+                            color = themeAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Help Info",
+                            tint = themeColors.subText,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { showingHelp = true }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("RCON", "PAPER_MSMP").forEach { type ->
+                            val selected = connectionType == type
+                            val label = if (type == "RCON") "LEGACY RCON" else "PAPER MSMP"
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (selected) themeAccent.copy(alpha = 0.15f) else themeColors.background)
+                                    .border(1.dp, if (selected) themeAccent else themeColors.border, RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        connectionType = type
+                                        port = if (type == "RCON") "25575" else "25585"
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (selected) themeAccent else themeColors.text,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
 
                 TextField(
                     value = port,
                     onValueChange = { port = it },
-                    label = { Text("RCON Port", fontSize = 12.sp) },
+                    label = { Text(if (connectionType == "RCON") "RCON Port" else "MSMP Port", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = themeColors.background,
                         unfocusedContainerColor = themeColors.background,
@@ -377,7 +546,7 @@ fun AddServerDialog(
                 TextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("RCON Password", fontSize = 12.sp) },
+                    label = { Text(if (connectionType == "RCON") "RCON Password" else "Management Secret Token", fontSize = 12.sp) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = themeColors.background,
                         unfocusedContainerColor = themeColors.background,
@@ -387,6 +556,51 @@ fun AddServerDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // TLS Toggle (only show for Paper MSMP)
+                if (connectionType == "PAPER_MSMP") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "ENABLE TLS (WSS)",
+                                    color = themeColors.text,
+                                    fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "TLS Info",
+                                    tint = themeColors.subText,
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clickable { showingHelp = true }
+                                )
+                            }
+                            Text(
+                                "Connect securely via wss://",
+                                color = themeColors.subText,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                        Switch(
+                            checked = useTLS,
+                            onCheckedChange = { useTLS = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = themeAccent,
+                                checkedTrackColor = themeAccent.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
 
                 if (showError) {
                     Text(
@@ -403,7 +617,7 @@ fun AddServerDialog(
                 onClick = {
                     val portInt = port.toIntOrNull()
                     if (name.isNotEmpty() && ip.isNotEmpty() && password.isNotEmpty() && portInt != null) {
-                        onSave(name, ip, portInt, password)
+                        onSave(name, ip, portInt, password, connectionType, useTLS)
                     } else {
                         showError = true
                     }

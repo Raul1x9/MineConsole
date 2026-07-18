@@ -169,14 +169,14 @@ struct DashboardView: View {
         }
     }
     
-    private func addServer(name: String, ip: String, port: Int, pass: String) {
+    private func addServer(name: String, ip: String, port: Int, pass: String, connectionType: String, useTLS: Bool) {
         let key = "mineconsole.password.\(UUID().uuidString)"
         
         // Save password to Keychain secure enclave
         _ = KeychainHelper.shared.saveString(pass, service: "MineConsole", account: key)
         
         // Save server metadata to SwiftData db
-        let newServer = ServerProfile(name: name, ip: ip, rconPort: port, keychainKey: key)
+        let newServer = ServerProfile(name: name, ip: ip, rconPort: port, keychainKey: key, connectionType: connectionType, useTLS: useTLS)
         modelContext.insert(newServer)
         
         try? modelContext.save()
@@ -195,7 +195,7 @@ struct DashboardView: View {
 // Add Server Sheet Component
 struct AddServerSheet: View {
     @Binding var isPresented: Bool
-    var onSave: (String, String, Int, String) -> Void
+    var onSave: (String, String, Int, String, String, Bool) -> Void
     
     @AppStorage("appTheme") private var appTheme = "System"
     @AppStorage("appAccentColor") private var appAccentColor = "Green"
@@ -203,9 +203,12 @@ struct AddServerSheet: View {
     
     @State private var name = ""
     @State private var ip = ""
+    @State private var connectionType = "RCON" // "RCON" or "PAPER_MSMP"
     @State private var port = "25575"
     @State private var password = ""
+    @State private var useTLS = true
     @State private var showError = false
+    @State private var showingHelp = false
     
     private var isDark: Bool {
         switch appTheme {
@@ -253,11 +256,32 @@ struct AddServerSheet: View {
                                     .background(colors.border)
                                     .cornerRadius(8)
                                     .foregroundColor(colors.text)
-                                    .keyboardType(.numbersAndPunctuation)
+                            }
+                            
+                            // Connection Type Selector
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("CONNECTION TYPE")
+                                        .font(.custom("Courier-Bold", size: 12))
+                                        .foregroundColor(accentColor)
+                                    Spacer()
+                                    Button(action: { showingHelp = true }) {
+                                        Image(systemName: "info.circle")
+                                            .foregroundColor(accentColor)
+                                    }
+                                }
+                                Picker("Connection Type", selection: $connectionType) {
+                                    Text("LEGACY RCON").tag("RCON")
+                                    Text("PAPER MSMP").tag("PAPER_MSMP")
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: connectionType) {
+                                    port = (connectionType == "RCON") ? "25575" : "25585"
+                                }
                             }
                             
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("RCON TCP PORT")
+                                Text(connectionType == "RCON" ? "RCON TCP PORT" : "MSMP PORT")
                                     .font(.custom("Courier-Bold", size: 12))
                                     .foregroundColor(accentColor)
                                 TextField("25575", text: $port)
@@ -270,7 +294,7 @@ struct AddServerSheet: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("RCON PASSWORD")
+                                Text(connectionType == "RCON" ? "RCON PASSWORD" : "MANAGEMENT SECRET TOKEN")
                                     .font(.custom("Courier-Bold", size: 12))
                                     .foregroundColor(accentColor)
                                 SecureField("••••••••", text: $password)
@@ -279,6 +303,21 @@ struct AddServerSheet: View {
                                     .background(colors.border)
                                     .cornerRadius(8)
                                     .foregroundColor(colors.text)
+                            }
+                            
+                            if connectionType == "PAPER_MSMP" {
+                                Toggle(isOn: $useTLS) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("ENABLE TLS (WSS)")
+                                            .font(.custom("Courier-Bold", size: 12))
+                                            .foregroundColor(colors.text)
+                                        Text("Connect securely using secure websockets (wss://)")
+                                            .font(.custom("Courier", size: 10))
+                                            .foregroundColor(colors.subText)
+                                    }
+                                }
+                                .tint(accentColor)
+                                .padding(.vertical, 8)
                             }
                         }
                         .padding()
@@ -310,6 +349,15 @@ struct AddServerSheet: View {
                         .font(.custom("Courier-Bold", size: 12))
                         .foregroundColor(accentColor)
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { showingHelp = true }) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(accentColor)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingHelp) {
+                ConnectionHelpView(colors: colors, accentColor: accentColor)
             }
         }
     }
@@ -319,8 +367,74 @@ struct AddServerSheet: View {
             showError = true
             return
         }
-        onSave(name, ip, portInt, password)
+        onSave(name, ip, portInt, password, connectionType, useTLS)
         isPresented = false
+    }
+}
+
+// Help Guide View
+struct ConnectionHelpView: View {
+    let colors: ThemeColors
+    let accentColor: Color
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                colors.background.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        Group {
+                            Text("1. RCON (LEGACY)")
+                                .font(.custom("Courier-Bold", size: 14))
+                                .foregroundColor(accentColor)
+                            
+                            Text("A legacy protocol for executing remote commands. To enable, configure your server.properties file:\n\nenable-rcon=true\nrcon.port=25575\nrcon.password=your_secure_password")
+                                .font(.custom("Courier", size: 12))
+                                .foregroundColor(colors.subText)
+                                .padding(.leading, 8)
+                        }
+                        
+                        Divider().background(colors.border)
+                        
+                        Group {
+                            Text("2. PAPER MSMP (MODERN)")
+                                .font(.custom("Courier-Bold", size: 14))
+                                .foregroundColor(accentColor)
+                            
+                            Text("A modern WebSocket JSON-RPC protocol supported by PaperMC (Minecraft 1.21.9+). Configure server.properties:\n\nmanagement-server-enabled=true\nmanagement-server-host=0.0.0.0\nmanagement-server-port=25585\nmanagement-server-secret=your_40_char_token\nmanagement-server-tls-enabled=true")
+                                .font(.custom("Courier", size: 12))
+                                .foregroundColor(colors.subText)
+                                .padding(.leading, 8)
+                        }
+                        
+                        Divider().background(colors.border)
+                        
+                        Group {
+                            Text("3. TLS (WSS) OPTIONS")
+                                .font(.custom("Courier-Bold", size: 14))
+                                .foregroundColor(accentColor)
+                            
+                            Text("• Scenario A (No TLS - Local/VPN):\nSet 'management-server-tls-enabled=false' in server.properties and turn off the TLS switch in this app. The app connects via ws:// (unencrypted WebSocket).\n\n• Scenario B (TLS Enabled - Public secure):\nSet 'management-server-tls-enabled=true' in server.properties and turn on the TLS switch in this app. The app connects via wss:// (encrypted WebSocket).")
+                                .font(.custom("Courier", size: 12))
+                                .foregroundColor(colors.subText)
+                                .padding(.leading, 8)
+                        }
+                    }
+                    .padding()
+                }
+            }
+            .navigationTitle("CONNECTION GUIDE")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("CLOSE") { dismiss() }
+                        .font(.custom("Courier-Bold", size: 12))
+                        .foregroundColor(accentColor)
+                }
+            }
+        }
     }
 }
 
@@ -345,7 +459,8 @@ struct ServerRowView: View {
                     .font(.custom("Courier-Bold", size: 16))
                     .foregroundColor(colors.text)
                 
-                Text("\(server.ip):\(String(server.rconPort))")
+                let connLabel = server.connectionType == "PAPER_MSMP" ? "MSMP" : "RCON"
+                Text("\(server.ip):\(String(server.rconPort)) (\(connLabel))")
                     .font(.custom("Courier", size: 12))
                     .foregroundColor(colors.subText)
             }

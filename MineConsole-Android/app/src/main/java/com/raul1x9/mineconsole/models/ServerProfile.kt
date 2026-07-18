@@ -12,5 +12,7 @@ data class ServerProfile(
     var rconPort: Int,
     var keychainKey: String,
     var sharedRole: String = "Owner",
+    var connectionType: String = "RCON", // "RCON" or "PAPER_MSMP"
+    var useTLS: Boolean = true,
     val creationDate: Long = System.currentTimeMillis()
 )

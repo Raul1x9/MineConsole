@@ -63,7 +63,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sharedPrefs.edit().putString("app_accent_color", color).apply()
     }
 
-    fun addServer(name: String, ip: String, port: Int, pass: String) {
+    fun addServer(name: String, ip: String, port: Int, pass: String, connectionType: String = "RCON", useTLS: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
             val keychainKey = "mineconsole.password.${UUID.randomUUID()}"
             
@@ -75,7 +75,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 name = name,
                 ip = ip,
                 rconPort = port,
-                keychainKey = keychainKey
+                keychainKey = keychainKey,
+                connectionType = connectionType,
+                useTLS = useTLS
             )
             serverDao.insertServer(newProfile)
         }

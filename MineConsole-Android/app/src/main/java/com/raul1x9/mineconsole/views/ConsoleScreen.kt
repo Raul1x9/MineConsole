@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.raul1x9.mineconsole.models.ServerProfile
 import com.raul1x9.mineconsole.network.ConsoleLogManager
 import com.raul1x9.mineconsole.network.RconClient
+import com.raul1x9.mineconsole.network.PaperMsmpClient
 import com.raul1x9.mineconsole.security.SecurityHelper
 import com.raul1x9.mineconsole.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
@@ -47,9 +48,12 @@ fun ConsoleScreen(
     val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     val coroutineScope = rememberCoroutineScope()
     
+    val isMsmp = server.connectionType == "PAPER_MSMP"
     val rcon = remember { RconClient() }
-    val isConnected by rcon.isConnected.collectAsState()
-    val isAuthenticated by rcon.isAuthenticated.collectAsState()
+    val msmp = remember { PaperMsmpClient() }
+    
+    val isConnected by if (isMsmp) msmp.isConnected.collectAsState() else rcon.isConnected.collectAsState()
+    val isAuthenticated by if (isMsmp) msmp.isAuthenticated.collectAsState() else rcon.isAuthenticated.collectAsState()
     
     val logStreamMap by ConsoleLogManager.logs.collectAsState()
     val logStream = logStreamMap[server.id] ?: emptyList()
@@ -68,11 +72,15 @@ fun ConsoleScreen(
         ThemeManager.getAccentColor(viewModel.appAccentColor.value)
     }
 
-    // Connect RCON on start
+    // Connect on start
     LaunchedEffect(Unit) {
         val securityHelper = SecurityHelper.getInstance(context)
         val decryptedPass = securityHelper.readString(server.keychainKey) ?: ""
-        rcon.connect(server.ip, server.rconPort, decryptedPass, server.id)
+        if (isMsmp) {
+            msmp.connect(server.ip, server.rconPort, decryptedPass, server.useTLS, server.id)
+        } else {
+            rcon.connect(server.ip, server.rconPort, decryptedPass, server.id)
+        }
     }
 
     // Prevent screen turn-off and keep CPU awake during active Console monitoring
@@ -95,7 +103,11 @@ fun ConsoleScreen(
                     wakeLock.release()
                 }
             } catch (_: Exception) {}
-            rcon.disconnect(true)
+            if (isMsmp) {
+                msmp.disconnect()
+            } else {
+                rcon.disconnect(true)
+            }
         }
     }
 
@@ -136,23 +148,42 @@ fun ConsoleScreen(
             val lowerCmd = cmd.lowercase()
             for (dCmd in destructiveCommands) {
                 if (lowerCmd.startsWith(dCmd)) {
-                    rcon.appendLog("> $cmd")
-                    rcon.appendLog("[Security Alert] Command $dCmd blocked: Moderator privilege level exceeded.")
+                    val msg = "[Security Alert] Command $dCmd blocked: Moderator privilege level exceeded."
+                    if (isMsmp) {
+                        msmp.appendLog("> $cmd")
+                        msmp.appendLog(msg)
+                    } else {
+                        rcon.appendLog("> $cmd")
+                        rcon.appendLog(msg)
+                    }
                     commandInput = ""
                     return
                 }
             }
         }
 
-        rcon.appendLog("> $cmd")
-
-        rcon.sendCommand(cmd) { response, error ->
-            if (error != null) {
-                rcon.appendLog("[Error] Command delivery failed: ${error.localizedMessage}")
-            } else {
-                triggerHapticFeedback("light")
-                if (commandHistory.lastOrNull() != cmd) {
-                    commandHistory.add(cmd)
+        if (isMsmp) {
+            msmp.appendLog("> $cmd")
+            msmp.sendCommand(cmd) { response, error ->
+                if (error != null) {
+                    msmp.appendLog("[Error] Command delivery failed: ${error.localizedMessage}")
+                } else {
+                    triggerHapticFeedback("light")
+                    if (commandHistory.lastOrNull() != cmd) {
+                        commandHistory.add(cmd)
+                    }
+                }
+            }
+        } else {
+            rcon.appendLog("> $cmd")
+            rcon.sendCommand(cmd) { response, error ->
+                if (error != null) {
+                    rcon.appendLog("[Error] Command delivery failed: ${error.localizedMessage}")
+                } else {
+                    triggerHapticFeedback("light")
+                    if (commandHistory.lastOrNull() != cmd) {
+                        commandHistory.add(cmd)
+                    }
                 }
             }
         }

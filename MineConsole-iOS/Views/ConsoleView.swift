@@ -4,7 +4,20 @@ import UIKit
 struct ConsoleView: View {
     let server: ServerProfile
     @StateObject private var rcon = RCONClient()
+    @StateObject private var msmp = PaperMSMPClient()
     @ObservedObject private var logManager = ConsoleLogManager.shared
+    
+    private var isMsmp: Bool {
+        server.connectionType == "PAPER_MSMP"
+    }
+    
+    private var isConnected: Bool {
+        isMsmp ? msmp.isConnected : rcon.isConnected
+    }
+    
+    private var isAuthenticated: Bool {
+        isMsmp ? msmp.isAuthenticated : rcon.isAuthenticated
+    }
     
     @State private var commandInput = ""
     @State private var commandHistory: [String] = []
@@ -67,13 +80,13 @@ struct ConsoleView: View {
                 // Connection Status Header Bar
                 HStack {
                     Circle()
-                        .fill(rcon.isAuthenticated ? accentColor : Color.red)
+                        .fill(isAuthenticated ? accentColor : Color.red)
                         .frame(width: 8, height: 8)
-                        .shadow(color: (rcon.isAuthenticated ? accentColor : Color.red).opacity(0.8), radius: 4)
+                        .shadow(color: (isAuthenticated ? accentColor : Color.red).opacity(0.8), radius: 4)
                     
-                    Text(rcon.isAuthenticated ? "CONNECTED - \(server.ip)" : "DISCONNECTED")
+                    Text(isAuthenticated ? "CONNECTED - \(server.ip)" : "DISCONNECTED")
                         .font(.custom("Courier-Bold", size: 10))
-                        .foregroundColor(rcon.isAuthenticated ? accentColor : .red)
+                        .foregroundColor(isAuthenticated ? accentColor : .red)
                     
                     Spacer()
                     
@@ -235,11 +248,19 @@ struct ConsoleView: View {
             return
         }
         
-        rcon.connect(host: server.ip, port: server.rconPort, password: pass, serverId: server.id)
+        if isMsmp {
+            msmp.connect(host: server.ip, port: server.rconPort, secret: pass, useTLS: server.useTLS, serverId: server.id)
+        } else {
+            rcon.connect(host: server.ip, port: server.rconPort, password: pass, serverId: server.id)
+        }
     }
     
     private func disconnectFromRCON() {
-        rcon.disconnect()
+        if isMsmp {
+            msmp.disconnect()
+        } else {
+            rcon.disconnect()
+        }
     }
     
     private func sendPresetCommand(_ cmd: String) {
@@ -271,18 +292,35 @@ struct ConsoleView: View {
         
         ConsoleLogManager.shared.addLog(for: server.id, message: "> \(cmd)")
         
-        // Send command through TCP socket client
-        rcon.sendCommand(cmd) { response, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    self.notificationFeedback.notificationOccurred(.error)
-                    ConsoleLogManager.shared.addLog(for: self.server.id, message: "[Error] Command delivery failed: \(error.localizedDescription)")
-                } else {
-                    self.impactLight.impactOccurred()
-                    if let cmdHistoryLast = self.commandHistory.last, cmdHistoryLast == cmd {
-                        // avoid duplicate history entries
+        if isMsmp {
+            msmp.sendCommand(cmd) { response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self.notificationFeedback.notificationOccurred(.error)
+                        ConsoleLogManager.shared.addLog(for: self.server.id, message: "[Error] Command delivery failed: \(error.localizedDescription)")
                     } else {
-                        self.commandHistory.append(cmd)
+                        self.impactLight.impactOccurred()
+                        if let cmdHistoryLast = self.commandHistory.last, cmdHistoryLast == cmd {
+                            // avoid duplicate history entries
+                        } else {
+                            self.commandHistory.append(cmd)
+                        }
+                    }
+                }
+            }
+        } else {
+            rcon.sendCommand(cmd) { response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self.notificationFeedback.notificationOccurred(.error)
+                        ConsoleLogManager.shared.addLog(for: self.server.id, message: "[Error] Command delivery failed: \(error.localizedDescription)")
+                    } else {
+                        self.impactLight.impactOccurred()
+                        if let cmdHistoryLast = self.commandHistory.last, cmdHistoryLast == cmd {
+                            // avoid duplicate history entries
+                        } else {
+                            self.commandHistory.append(cmd)
+                        }
                     }
                 }
             }
