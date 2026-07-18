@@ -110,7 +110,11 @@ public final class PaperMSMPClient: ObservableObject {
         var payload: [String: Any] = [:]
         payload["jsonrpc"] = "2.0"
         payload["method"] = translated.method
-        payload["params"] = translated.params
+        if let dict = translated.params as? [String: Any], !dict.isEmpty {
+            payload["params"] = dict
+        } else if let arr = translated.params as? [Any], !arr.isEmpty {
+            payload["params"] = arr
+        }
         payload["id"] = reqID
         
         guard let data = try? JSONSerialization.data(withJSONObject: payload),

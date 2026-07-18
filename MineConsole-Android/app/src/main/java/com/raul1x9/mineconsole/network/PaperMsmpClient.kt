@@ -139,9 +139,9 @@ class PaperMsmpClient {
             val payload = JSONObject().apply {
                 put("jsonrpc", "2.0")
                 put("method", translated.method)
-                if (translated.params is JSONObject) {
+                if (translated.params is JSONObject && (translated.params as JSONObject).length() > 0) {
                     put("params", translated.params)
-                } else if (translated.params is JSONArray) {
+                } else if (translated.params is JSONArray && (translated.params as JSONArray).length() > 0) {
                     put("params", translated.params)
                 }
                 put("id", id)
