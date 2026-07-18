@@ -8,6 +8,7 @@ workflows:
     scripts:
       - name: Install XcodeGen
         script: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
           brew install xcodegen
       - name: Generate Xcode Project
         script: |
@@ -32,6 +33,7 @@ workflows:
     scripts:
       - name: Install XcodeGen
         script: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
           brew install xcodegen
       - name: Generate Xcode Project
         script: |
@@ -81,6 +83,7 @@ workflows:
     scripts:
       - name: Install XcodeGen
         script: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
           brew install xcodegen
       - name: Generate Xcode Project
         script: |
