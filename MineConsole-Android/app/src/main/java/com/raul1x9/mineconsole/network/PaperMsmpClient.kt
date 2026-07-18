@@ -132,6 +132,10 @@ class PaperMsmpClient {
 
         try {
             val translated = translateCommand(command)
+            if (translated.method == "unsupported") {
+                completion(null, Exception("MSMP does not support running arbitrary console commands. Please use RCON connection type for full console shell access."))
+                return
+            }
             synchronized(this) {
                 pendingCommandInfos[id] = PendingCmdInfo(command, translated.successMessage, translated.formatter)
             }
@@ -293,10 +297,8 @@ class PaperMsmpClient {
         }
         
         return TranslatedCommand(
-            method = "minecraft:server/run_command",
-            params = JSONObject().apply {
-                put("command", input)
-            }
+            method = "unsupported",
+            params = JSONObject()
         )
     }
 

@@ -105,6 +105,10 @@ public final class PaperMSMPClient: ObservableObject {
         callbacks[reqID] = completion
         
         let translated = translateCommand(command)
+        if translated.method == "unsupported" {
+            completion(nil, NSError(domain: "PaperMSMP", code: -3, userInfo: [NSLocalizedDescriptionKey: "MSMP does not support running arbitrary console commands. Please use RCON connection type for full console shell access."]))
+            return
+        }
         pendingCommandInfos[reqID] = PendingCmdInfo(originalCommand: command, successMessage: translated.successMessage, formatter: translated.formatter)
         
         var payload: [String: Any] = [:]
@@ -245,8 +249,8 @@ public final class PaperMSMPClient: ObservableObject {
         }
         
         return TranslatedCommand(
-            method: "minecraft:server/run_command",
-            params: ["command": input]
+            method: "unsupported",
+            params: [String: Any]()
         )
     }
     
