@@ -173,20 +173,20 @@ public final class PaperMSMPClient: ObservableObject {
                 if sub == "add", parts.count >= 3 {
                     let player = parts[2]
                     return TranslatedCommand(
-                        method = "minecraft:allowlist/add",
+                        method: "minecraft:allowlist/add",
                         params: [[["name": player]]],
                         successMessage: "Added \(player) to the whitelist."
                     )
                 } else if sub == "remove", parts.count >= 3 {
                     let player = parts[2]
                     return TranslatedCommand(
-                        method = "minecraft:allowlist/remove",
+                        method: "minecraft:allowlist/remove",
                         params: [[["name": player]]],
                         successMessage: "Removed \(player) from the whitelist."
                     )
                 } else if sub == "list" {
                     return TranslatedCommand(
-                        method = "minecraft:allowlist/list",
+                        method: "minecraft:allowlist/list",
                         params: [String: Any](),
                         formatter: { (response: [String: Any]) -> String in
                             let result = response["result"]
@@ -210,7 +210,7 @@ public final class PaperMSMPClient: ObservableObject {
             if parts.count >= 2 {
                 let player = parts[1]
                 return TranslatedCommand(
-                    method = "minecraft:operators/add",
+                    method: "minecraft:operators/add",
                     params: [[["name": player]]],
                     successMessage: "Opped \(player)."
                 )
@@ -219,7 +219,7 @@ public final class PaperMSMPClient: ObservableObject {
             if parts.count >= 2 {
                 let player = parts[1]
                 return TranslatedCommand(
-                    method = "minecraft:operators/remove",
+                    method: "minecraft:operators/remove",
                     params: [[["name": player]]],
                     successMessage: "De-opped \(player)."
                 )
