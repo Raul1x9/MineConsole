@@ -271,7 +271,7 @@ struct AddServerSheet: View {
                                     }
                                 }
                                 Picker("Connection Type", selection: $connectionType) {
-                                    Text("LEGACY RCON").tag("RCON")
+                                    Text("RCON").tag("RCON")
                                     Text("PAPER MSMP").tag("PAPER_MSMP")
                                 }
                                 .pickerStyle(.segmented)
@@ -303,6 +303,21 @@ struct AddServerSheet: View {
                                     .background(colors.border)
                                     .cornerRadius(8)
                                     .foregroundColor(colors.text)
+                            }
+                            
+                            if connectionType == "PAPER_MSMP" {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("⚠️ MSMP PROTOCOL LIMITATION NOTICE")
+                                        .font(.custom("Courier-Bold", size: 11))
+                                        .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.0))
+                                    Text("Paper MSMP is a structured API that only supports specific management commands (/list, /whitelist, /op, /deop, /stop, /save-all). Arbitrary console commands (like /say, /gamemode, or /tp) are NOT supported. For full unrestricted console access, select RCON above.")
+                                        .font(.custom("Courier", size: 11))
+                                        .foregroundColor(Color(red: 1.0, green: 0.93, blue: 0.7))
+                                }
+                                .padding(10)
+                                .background(Color(red: 0.2, green: 0.16, blue: 0.0))
+                                .cornerRadius(8)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(red: 1.0, green: 0.8, blue: 0.0), lineWidth: 1))
                             }
                             
                             if connectionType == "PAPER_MSMP" {
@@ -386,11 +401,11 @@ struct ConnectionHelpView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         Group {
-                            Text("1. RCON (LEGACY)")
+                            Text("1. RCON PROTOCOL")
                                 .font(.custom("Courier-Bold", size: 14))
                                 .foregroundColor(accentColor)
                             
-                            Text("A legacy protocol for executing remote commands. To enable, configure your server.properties file:\n\nenable-rcon=true\nrcon.port=25575\nrcon.password=your_secure_password")
+                            Text("The standard remote console shell protocol. Allows running any arbitrary command (/say, /gamemode, /tp, etc.). Configure in server.properties:\n\nenable-rcon=true\nrcon.port=25575\nrcon.password=your_secure_password")
                                 .font(.custom("Courier", size: 12))
                                 .foregroundColor(colors.subText)
                                 .padding(.leading, 8)

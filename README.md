@@ -1,6 +1,11 @@
-# MineConsole (Remote Server Manager)
+# MineConsole (Remote Server Manager) v1.2.1
 
-MineConsole is an open-source remote server management client designed for Minecraft administrators to monitor live consoles, execute secure RCON terminal commands, and configure role-based access for guest moderators.
+MineConsole is an open-source remote server management client designed for Minecraft administrators to monitor live consoles, execute secure RCON terminal commands, manage Paper MSMP servers, and configure role-based access for guest moderators.
+
+> [!NOTE]
+> **Protocol Support:**
+> - **RCON Protocol:** Standard remote console shell. Supports running **any arbitrary command** (`/say`, `/gamemode`, `/tp`, `/give`, etc.).
+> - **Paper MSMP Protocol:** Modern WebSocket JSON-RPC API. Supports structured management commands (`/list`, `/whitelist`, `/op`, `/deop`, `/stop`, `/save-all`). Arbitrary commands are restricted by the protocol.
 
 This workspace consists of a **native double-architecture**:
 1. **`MineConsole-iOS/`**: A native Apple Swift 5.10 + SwiftUI + SwiftData codebase utilizing `LocalAuthentication` and `Security` Keychains that is ready to compile in Xcode.

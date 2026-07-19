@@ -191,7 +191,7 @@ struct ConsoleView: View {
                                 .font(.system(size: 20))
                         }
                         
-                        TextField("TYPE COMMAND...", text: $commandInput)
+                        TextField(isMsmp ? "TYPE MSMP COMMAND (/list, /whitelist, /op...)" : "TYPE COMMAND...", text: $commandInput)
                             .font(.custom("Courier", size: 14))
                             .padding(.vertical, 10)
                             .padding(.horizontal, 12)

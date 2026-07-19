@@ -344,14 +344,14 @@ fun AddServerDialog(
                         .verticalScroll(scrollState)
                 ) {
                     Text(
-                        text = "1. RCON (Legacy)",
+                        text = "1. RCON Protocol",
                         fontWeight = FontWeight.Bold,
                         color = themeColors.text,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace
                     )
                     Text(
-                        text = "A legacy protocol for executing remote commands. To enable, add to server.properties:\n" +
+                        text = "The standard remote console shell protocol. Allows running any arbitrary command (/say, /gamemode, /tp, etc.). Configure in server.properties:\n" +
                                "enable-rcon=true\nrcon.port=25575\nrcon.password=your_secure_password",
                         color = themeColors.subText,
                         fontSize = 11.sp,
@@ -503,7 +503,7 @@ fun AddServerDialog(
                     ) {
                         listOf("RCON", "PAPER_MSMP").forEach { type ->
                             val selected = connectionType == type
-                            val label = if (type == "RCON") "LEGACY RCON" else "PAPER MSMP"
+                            val label = if (type == "RCON") "RCON" else "PAPER MSMP"
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -556,6 +556,34 @@ fun AddServerDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Warning Banner for Paper MSMP Protocol Limitations
+                if (connectionType == "PAPER_MSMP") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF332A00))
+                            .border(1.dp, Color(0xFFFFCC00), RoundedCornerShape(8.dp))
+                            .padding(10.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "⚠️ MSMP PROTOCOL LIMITATION NOTICE",
+                                color = Color(0xFFFFCC00),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Text(
+                                text = "Paper MSMP is a structured API that only supports specific management commands (/list, /whitelist, /op, /deop, /stop, /save-all). Arbitrary console commands (like /say, /gamemode, or /tp) are NOT supported. For full unrestricted console access, select RCON above.",
+                                color = Color(0xFFFFEEAA),
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
 
                 // TLS Toggle (only show for Paper MSMP)
                 if (connectionType == "PAPER_MSMP") {

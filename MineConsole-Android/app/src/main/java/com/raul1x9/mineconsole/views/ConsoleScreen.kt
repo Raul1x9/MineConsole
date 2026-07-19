@@ -418,7 +418,7 @@ fun ConsoleScreen(
                     TextField(
                         value = commandInput,
                         onValueChange = { commandInput = it },
-                        placeholder = { Text("TYPE COMMAND...", color = themeColors.subText, fontSize = 12.sp) },
+                        placeholder = { Text(if (server.connectionType == "PAPER_MSMP") "TYPE MSMP COMMAND (/list, /whitelist, /op...)" else "TYPE COMMAND...", color = themeColors.subText, fontSize = 11.sp) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = themeColors.background,
                             unfocusedContainerColor = themeColors.background,
